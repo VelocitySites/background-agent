@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
+import { DressedFigure } from "@/components/shop/DressedFigure";
+import { LOOK_PRESETS, outfitFromPreset, presetTotal } from "@/lib/shop/catalog";
 
 export default function Home() {
   const router = useRouter();
@@ -15,7 +17,7 @@ export default function Home() {
 
   useEffect(() => {
     if (isFirstVisit === false) {
-      router.push("/shop");
+      router.push("/shop/experience");
     }
   }, [isFirstVisit, router]);
 
@@ -39,7 +41,11 @@ export default function Home() {
         <WelcomeExperience
           onComplete={() => {
             localStorage.setItem("revolution_visited", "true");
-            router.push("/shop");
+            router.push("/shop/experience");
+          }}
+          onShopLook={(lookId) => {
+            localStorage.setItem("revolution_visited", "true");
+            router.push(`/shop/experience?look=${lookId}`);
           }}
         />
       </main>
@@ -49,7 +55,22 @@ export default function Home() {
   return null;
 }
 
-function WelcomeExperience({ onComplete }: { onComplete: () => void }) {
+const SECTION_LOOKS = [
+  ["street-king", "minimalist"],
+  ["classic", "athlete"],
+  ["fire-fit", "street-king"],
+  ["minimalist", "classic"],
+  ["athlete", "fire-fit"],
+  ["classic", "street-king"],
+];
+
+function WelcomeExperience({
+  onComplete,
+  onShopLook,
+}: {
+  onComplete: () => void;
+  onShopLook: (lookId: string) => void;
+}) {
   const [currentSection, setCurrentSection] = useState(0);
 
   const sections = [
@@ -125,12 +146,11 @@ function WelcomeExperience({ onComplete }: { onComplete: () => void }) {
             onFocus={() => setCurrentSection(index)}
           >
             <div className="absolute inset-0 flex">
-              {/* Left Model Placeholder */}
-              <div className="w-1/4 h-full bg-gradient-to-r from-brand-100 to-transparent flex items-center justify-center">
-                <div className="w-48 h-96 bg-brand-200 rounded-lg flex items-center justify-center text-brand-400">
-                  Model
-                </div>
-              </div>
+              <IntroModel
+                lookId={SECTION_LOOKS[index]?.[0] ?? "street-king"}
+                side="left"
+                onShopLook={onShopLook}
+              />
 
               {/* Center Content */}
               <div className="flex-1 flex items-center justify-center">
@@ -168,16 +188,49 @@ function WelcomeExperience({ onComplete }: { onComplete: () => void }) {
                 </motion.div>
               </div>
 
-              {/* Right Model Placeholder */}
-              <div className="w-1/4 h-full bg-gradient-to-l from-brand-100 to-transparent flex items-center justify-center">
-                <div className="w-48 h-96 bg-brand-200 rounded-lg flex items-center justify-center text-brand-400">
-                  Model
-                </div>
-              </div>
+              <IntroModel
+                lookId={SECTION_LOOKS[index]?.[1] ?? "classic"}
+                side="right"
+                onShopLook={onShopLook}
+              />
             </div>
           </section>
         ))}
       </div>
     </div>
+  );
+}
+
+function IntroModel({
+  lookId,
+  side,
+  onShopLook,
+}: {
+  lookId: string;
+  side: "left" | "right";
+  onShopLook: (lookId: string) => void;
+}) {
+  const preset = LOOK_PRESETS.find((entry) => entry.id === lookId);
+  const outfit = outfitFromPreset(lookId);
+  if (!preset || !outfit) return null;
+
+  return (
+    <button
+      type="button"
+      onClick={() => onShopLook(lookId)}
+      className={`hidden md:flex w-[22%] h-full items-center justify-center ${
+        side === "left"
+          ? "bg-gradient-to-r from-brand-100 to-transparent"
+          : "bg-gradient-to-l from-brand-100 to-transparent"
+      }`}
+    >
+      <span className="flex flex-col items-center gap-3">
+        <DressedFigure outfit={outfit} className="h-80 w-44" />
+        <span className="text-center">
+          <span className="block text-sm font-medium text-brand-900">{preset.name}</span>
+          <span className="block text-xs text-brand-500">${presetTotal(preset)} · shop this look</span>
+        </span>
+      </span>
+    </button>
   );
 }

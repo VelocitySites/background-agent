@@ -1,40 +1,37 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
 import {
   Shuffle,
   Camera,
-  Wand2,
   ArrowRight,
   ArrowLeft,
   Sparkles,
   User,
   Upload,
 } from "lucide-react";
+import { DressedFigure } from "@/components/shop/DressedFigure";
+import { defaultOutfit } from "@/lib/shop/catalog";
+import {
+  BODY_TYPES,
+  HAIR_COLORS,
+  HAIR_STYLES,
+  SKIN_TONES,
+  loadAvatar,
+  readPortrait,
+  saveAvatar,
+  type AvatarConfig,
+  type AvatarMode,
+} from "@/lib/shop/avatar";
 
-type AvatarCreationMode = "random" | "customize" | "photo";
 type CreationStep = "mode" | "customize" | "style" | "complete";
-
-interface AvatarConfig {
-  mode: AvatarCreationMode;
-  skinTone: number;
-  hairStyle: number;
-  hairColor: number;
-  bodyType: number;
-  facialFeatures: number;
-  photoUrl?: string;
-}
-
-const SKIN_TONES = ["#FFDFC4", "#F0C08A", "#CD9A6E", "#8D6346", "#5C3D2E", "#3B2219"];
-const HAIR_STYLES = ["Short", "Medium", "Long", "Curly", "Wavy", "Bald"];
-const HAIR_COLORS = ["#1A1A1A", "#4A3728", "#8B4513", "#D4A574", "#C0C0C0", "#FF6B6B"];
-const BODY_TYPES = ["Slim", "Athletic", "Average", "Curvy", "Plus"];
 
 export default function CreateAvatarPage() {
   const router = useRouter();
   const [step, setStep] = useState<CreationStep>("mode");
+  const [photoError, setPhotoError] = useState<string | null>(null);
   const [avatar, setAvatar] = useState<AvatarConfig>({
     mode: "random",
     skinTone: 2,
@@ -43,6 +40,11 @@ export default function CreateAvatarPage() {
     bodyType: 2,
     facialFeatures: 0,
   });
+
+  useEffect(() => {
+    const saved = loadAvatar();
+    if (saved) setAvatar(saved);
+  }, []);
 
   const randomizeAvatar = () => {
     setAvatar({
@@ -55,7 +57,7 @@ export default function CreateAvatarPage() {
     });
   };
 
-  const selectMode = (mode: AvatarCreationMode) => {
+  const selectMode = (mode: AvatarMode) => {
     setAvatar({ ...avatar, mode });
     if (mode === "random") {
       randomizeAvatar();
@@ -63,9 +65,21 @@ export default function CreateAvatarPage() {
     setStep("customize");
   };
 
-  const handleComplete = () => {
-    localStorage.setItem("revolution_avatar", JSON.stringify(avatar));
-    router.push("/shop/experience");
+  const onPhoto = async (file: File | undefined) => {
+    if (!file) return;
+    try {
+      const photoUrl = await readPortrait(file);
+      setAvatar((current) => ({ ...current, mode: "photo", photoUrl }));
+      setPhotoError(null);
+    } catch {
+      setPhotoError("That photo couldn't be read. Try another image.");
+    }
+  };
+
+  const handleComplete = (styleName: string) => {
+    const next = { ...avatar, startingStyle: styleName };
+    saveAvatar(next);
+    router.push(`/shop/experience?style=${encodeURIComponent(styleName.toLowerCase())}`);
   };
 
   return (
@@ -113,8 +127,8 @@ export default function CreateAvatarPage() {
                   Create Your Avatar
                 </h1>
                 <p className="text-xl text-brand-300">
-                  Shop like you're building a character. See exactly how clothes
-                  will look on you.
+                  Shop like you're building a character. The figure wears the
+                  clothes. This is not a photo try-on.
                 </p>
               </div>
 
@@ -174,8 +188,8 @@ export default function CreateAvatarPage() {
                     Use Your Photo
                   </h3>
                   <p className="text-brand-400">
-                    Upload a photo and we'll create a realistic avatar that
-                    looks like you.
+                    Upload a photo. We use it as your face in the dressing room
+                    and keep it in this browser.
                   </p>
                 </motion.button>
               </div>
@@ -216,48 +230,35 @@ export default function CreateAvatarPage() {
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
                 {/* Avatar Preview */}
-                <div className="flex items-center justify-center">
-                  <div className="relative">
-                    <motion.div
-                      key={JSON.stringify(avatar)}
-                      initial={{ scale: 0.9, opacity: 0 }}
-                      animate={{ scale: 1, opacity: 1 }}
-                      className="w-72 h-96 bg-gradient-to-b from-brand-700 to-brand-800 rounded-2xl flex items-center justify-center relative overflow-hidden"
-                    >
-                      {/* Simplified avatar visualization */}
-                      <div className="text-center">
-                        <div
-                          className="w-24 h-24 rounded-full mx-auto mb-4 border-4 border-brand-600"
-                          style={{ backgroundColor: SKIN_TONES[avatar.skinTone] }}
-                        />
-                        <div
-                          className="w-20 h-8 rounded-full mx-auto -mt-8 mb-4"
-                          style={{ backgroundColor: HAIR_COLORS[avatar.hairColor] }}
-                        />
-                        <div
-                          className="w-32 h-48 rounded-t-3xl mx-auto"
-                          style={{ backgroundColor: SKIN_TONES[avatar.skinTone] }}
-                        />
-                        <p className="absolute bottom-4 left-0 right-0 text-brand-400 text-sm">
-                          {BODY_TYPES[avatar.bodyType]} Build
-                        </p>
-                      </div>
-                    </motion.div>
-
-                    {avatar.mode === "photo" && (
-                      <div className="absolute inset-0 flex items-center justify-center bg-brand-900/90 rounded-2xl">
-                        <div className="text-center p-8">
-                          <Upload className="w-12 h-12 text-brand-500 mx-auto mb-4" />
-                          <p className="text-brand-300 mb-4">
-                            Upload your photo to generate avatar
-                          </p>
-                          <button className="px-6 py-3 bg-accent-500 text-white rounded-full hover:bg-accent-600 transition-colors">
-                            Choose Photo
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
+                <div className="flex flex-col items-center justify-center gap-4">
+                  <DressedFigure
+                    outfit={defaultOutfit()}
+                    avatar={avatar}
+                    className="h-[460px] w-72"
+                  />
+                  <p className="text-sm text-brand-400">
+                    {BODY_TYPES[avatar.bodyType]} build
+                    {avatar.photoUrl ? " · your photo is the face" : ""}
+                  </p>
+                  {avatar.mode === "photo" && (
+                    <label className="inline-flex cursor-pointer items-center gap-2 rounded-full bg-accent-500 px-5 py-3 text-sm text-white hover:bg-accent-600">
+                      <Upload className="h-4 w-4" />
+                      {avatar.photoUrl ? "Replace photo" : "Choose photo"}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(event) => onPhoto(event.target.files?.[0])}
+                      />
+                    </label>
+                  )}
+                  {photoError && <p className="text-sm text-accent-300">{photoError}</p>}
+                  {avatar.mode === "photo" && (
+                    <p className="max-w-sm text-center text-xs text-brand-500">
+                      The photo stays in this browser and becomes the face in the dressing room.
+                      Clothes are illustrated on the figure. This is not an AI try-on.
+                    </p>
+                  )}
                 </div>
 
                 {/* Customization Options */}
@@ -350,7 +351,13 @@ export default function CreateAvatarPage() {
 
                   {/* Continue Button */}
                   <motion.button
-                    onClick={() => setStep("style")}
+                    onClick={() => {
+                      if (avatar.mode === "photo" && !avatar.photoUrl) {
+                        setPhotoError("Add a photo first, or go back and build a look instead.");
+                        return;
+                      }
+                      setStep("style");
+                    }}
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                     className="w-full flex items-center justify-center gap-2 px-8 py-4 bg-accent-500 text-white rounded-full text-lg font-medium hover:bg-accent-600 transition-colors mt-8"
@@ -402,7 +409,7 @@ export default function CreateAvatarPage() {
                 ].map((style) => (
                   <motion.button
                     key={style.name}
-                    onClick={handleComplete}
+                    onClick={() => handleComplete(style.name)}
                     whileHover={{ scale: 1.05, y: -4 }}
                     whileTap={{ scale: 0.95 }}
                     className={`${style.color} rounded-2xl p-6 text-center transition-all hover:ring-2 hover:ring-accent-400`}

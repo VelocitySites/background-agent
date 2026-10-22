@@ -1,426 +1,522 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import {
-  ShoppingBag,
   Heart,
   Shuffle,
   Camera,
-  Share2,
   Undo2,
-  Save,
   ExternalLink,
   Volume2,
   VolumeX,
   Keyboard,
   Loader2,
+  Check,
 } from "lucide-react";
 import { useFadeOnIdle } from "@/hooks/useFadeOnIdle";
 import { cn } from "@/lib/utils";
 import { ParticleBackground } from "@/components/shop/ParticleBackground";
-import { EnhancedAvatar } from "@/components/shop/EnhancedAvatar";
-import { EnhancedClothingSelector } from "@/components/shop/EnhancedClothingSelector";
+import { DressedFigure } from "@/components/shop/DressedFigure";
+import { GarmentRail } from "@/components/shop/GarmentRail";
 import { OnboardingTutorial } from "@/components/shop/OnboardingTutorial";
 import { OutfitPresets } from "@/components/shop/OutfitPresets";
 import { CompleteTheLook } from "@/components/shop/CompleteTheLook";
 import { EnhancedCheckoutBar } from "@/components/shop/EnhancedCheckoutBar";
-
-type ClothingSlot = "head" | "top" | "bottom" | "feet" | "accessory";
-
-interface ClothingItem {
-  id: string;
-  name: string;
-  brand: string;
-  price: number;
-  affiliateUrl: string;
-  imageUrl: string;
-  slot: ClothingSlot;
-  colors: string[];
-  sizes?: string[];
-  style: string[];
-}
-
-interface SelectedOutfit {
-  [key: string]: ClothingItem | null;
-}
-
-const MOCK_INVENTORY: ClothingItem[] = [
-  { id: "h1", name: "Classic Baseball Cap", brand: "Nike", price: 28, affiliateUrl: "#", imageUrl: "", slot: "head", colors: ["black", "navy"], style: ["streetwear", "athleisure"] },
-  { id: "h2", name: "Wool Beanie", brand: "Carhartt", price: 35, affiliateUrl: "#", imageUrl: "", slot: "head", colors: ["gray", "black"], style: ["streetwear", "minimalist"] },
-  { id: "h3", name: "Bucket Hat", brand: "Stussy", price: 45, affiliateUrl: "#", imageUrl: "", slot: "head", colors: ["khaki", "black"], style: ["streetwear"] },
-  { id: "t1", name: "Essential Cotton Tee", brand: "Uniqlo", price: 15, affiliateUrl: "#", imageUrl: "", slot: "top", colors: ["white", "black", "gray"], style: ["minimalist", "classic"] },
-  { id: "t2", name: "Oversized Hoodie", brand: "Champion", price: 65, affiliateUrl: "#", imageUrl: "", slot: "top", colors: ["heather gray", "navy"], style: ["streetwear", "athleisure"] },
-  { id: "t3", name: "Oxford Button-Down", brand: "J.Crew", price: 89, affiliateUrl: "#", imageUrl: "", slot: "top", colors: ["light blue", "white"], style: ["classic", "preppy"] },
-  { id: "t4", name: "Graphic Tee", brand: "Supreme", price: 48, affiliateUrl: "#", imageUrl: "", slot: "top", colors: ["black", "white"], style: ["streetwear"] },
-  { id: "b1", name: "Slim Fit Chinos", brand: "Bonobos", price: 98, affiliateUrl: "#", imageUrl: "", slot: "bottom", colors: ["khaki", "navy"], style: ["classic", "preppy"] },
-  { id: "b2", name: "Relaxed Joggers", brand: "Nike", price: 75, affiliateUrl: "#", imageUrl: "", slot: "bottom", colors: ["black", "gray"], style: ["athleisure", "streetwear"] },
-  { id: "b3", name: "Straight Leg Jeans", brand: "Levi's", price: 69, affiliateUrl: "#", imageUrl: "", slot: "bottom", colors: ["indigo", "black"], style: ["classic", "streetwear"] },
-  { id: "f1", name: "White Leather Sneakers", brand: "Common Projects", price: 425, affiliateUrl: "#", imageUrl: "", slot: "feet", colors: ["white"], style: ["minimalist", "classic"] },
-  { id: "f2", name: "Classic Canvas", brand: "Converse", price: 55, affiliateUrl: "#", imageUrl: "", slot: "feet", colors: ["black", "white"], style: ["streetwear", "classic"] },
-  { id: "f3", name: "Running Shoes", brand: "New Balance", price: 120, affiliateUrl: "#", imageUrl: "", slot: "feet", colors: ["gray", "navy"], style: ["athleisure"] },
-];
-
-const SLOT_LABELS: Record<ClothingSlot, string> = {
-  head: "Headwear",
-  top: "Top",
-  bottom: "Bottom",
-  feet: "Footwear",
-  accessory: "Accessory",
-};
+import { DeepDive } from "@/components/shop/DeepDive";
+import { PieceQuickMenu } from "@/components/shop/PieceQuickMenu";
+import {
+  INVENTORY,
+  SLOT_LABELS,
+  STYLE_TO_LOOK,
+  defaultOutfit,
+  emptyOutfit,
+  itemById,
+  itemsForSlot,
+  outfitFromPreset,
+  outfitItemIds,
+  outfitTotal,
+  randomOutfit,
+  type ClothingItem,
+  type SelectedOutfit,
+} from "@/lib/shop/catalog";
+import {
+  BODY_TYPES,
+  HAIR_STYLES,
+  loadAvatar,
+  type AvatarConfig,
+} from "@/lib/shop/avatar";
+import { addLook } from "@/lib/shop/looks";
+import type { ClothingSlot } from "@/types";
 
 const TUTORIAL_STORAGE_KEY = "revolution_tutorial_completed";
 const SOUND_STORAGE_KEY = "revolution_sound_enabled";
+const DEEP_DIVE_KEY = "revolution_deep_dive";
+const DRESS_SLOTS = ["head", "top", "bottom", "feet"] as const;
+
+const RAIL_LAYOUT: Record<"head" | "top" | "bottom" | "feet", string> = {
+  head: "left-0 top-4",
+  top: "right-0 top-28",
+  bottom: "left-0 top-80",
+  feet: "bottom-6 right-0",
+};
 
 export default function ShopExperiencePage() {
   const [isLoading, setIsLoading] = useState(true);
-  const [outfit, setOutfit] = useState<SelectedOutfit>({
-    head: null,
-    top: MOCK_INVENTORY.find(i => i.id === "t1") || null,
-    bottom: MOCK_INVENTORY.find(i => i.id === "b3") || null,
-    feet: MOCK_INVENTORY.find(i => i.id === "f2") || null,
-  });
+  const [outfit, setOutfit] = useState<SelectedOutfit>(defaultOutfit);
   const [outfitHistory, setOutfitHistory] = useState<SelectedOutfit[]>([]);
   const [activeSlot, setActiveSlot] = useState<ClothingSlot | null>(null);
-  const [savedOutfits, setSavedOutfits] = useState<SelectedOutfit[]>([]);
+  const [avatar, setAvatar] = useState<AvatarConfig | null>(null);
   const [showCheckout, setShowCheckout] = useState(false);
   const [showTutorial, setShowTutorial] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(false);
   const [showKeyboardHints, setShowKeyboardHints] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [deepDive, setDeepDive] = useState(false);
+  const [menuItem, setMenuItem] = useState<ClothingItem | null>(null);
+  const [diveItem, setDiveItem] = useState<ClothingItem | null>(null);
+  const outfitRef = useRef(outfit);
+  const historyRef = useRef(outfitHistory);
+  const clickTimer = useRef<number | null>(null);
+  outfitRef.current = outfit;
+  historyRef.current = outfitHistory;
 
   const { opacity: menuOpacity, handlers: menuHandlers } = useFadeOnIdle({
-    timeout: 4000,
+    timeout: 2800,
     initiallyVisible: true,
+    minOpacity: 0,
   });
 
   useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 800);
-    
+    const timer = setTimeout(() => setIsLoading(false), 500);
     const tutorialCompleted = localStorage.getItem(TUTORIAL_STORAGE_KEY);
     if (!tutorialCompleted) {
-      setTimeout(() => setShowTutorial(true), 1200);
+      setTimeout(() => setShowTutorial(true), 900);
     }
-    
-    const soundPref = localStorage.getItem(SOUND_STORAGE_KEY);
-    if (soundPref) {
-      setSoundEnabled(soundPref === "true");
+    setSoundEnabled(localStorage.getItem(SOUND_STORAGE_KEY) === "true");
+    setDeepDive(localStorage.getItem(DEEP_DIVE_KEY) === "true");
+    setAvatar(loadAvatar());
+
+    const params = new URLSearchParams(window.location.search);
+    const look = params.get("look");
+    const style = params.get("style");
+    const slot = params.get("slot");
+    const saved = loadAvatar();
+    const styleKey = (style || saved?.startingStyle || "").toLowerCase();
+    const presetId = look || STYLE_TO_LOOK[styleKey];
+
+    if (presetId === "random") {
+      setOutfit(randomOutfit());
+    } else if (presetId) {
+      const next = outfitFromPreset(presetId) ?? outfitFromItemList(presetId);
+      if (next) setOutfit(next);
     }
-    
-    return () => clearTimeout(timer);
+
+    if (slot === "head" || slot === "top" || slot === "bottom" || slot === "feet") {
+      setActiveSlot(slot);
+    }
+
+    const onAvatar = () => setAvatar(loadAvatar());
+    window.addEventListener("revolution-avatar-changed", onAvatar);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener("revolution-avatar-changed", onAvatar);
+    };
+  }, []);
+
+  const playSound = useCallback(
+    (type: "select" | "remove" | "shuffle") => {
+      if (!soundEnabled || typeof window === "undefined") return;
+      const AudioCtx =
+        window.AudioContext ||
+        (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      const oscillator = ctx.createOscillator();
+      const gain = ctx.createGain();
+      oscillator.type = "sine";
+      oscillator.frequency.value = type === "shuffle" ? 520 : type === "remove" ? 220 : 660;
+      gain.gain.value = 0.03;
+      oscillator.connect(gain);
+      gain.connect(ctx.destination);
+      oscillator.start();
+      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.12);
+      oscillator.stop(ctx.currentTime + 0.12);
+      oscillator.onended = () => ctx.close();
+    },
+    [soundEnabled]
+  );
+
+  const remember = useCallback(() => {
+    const current = outfitRef.current;
+    setOutfitHistory((prev) => [...prev.slice(-9), current]);
+  }, []);
+
+  const selectItem = useCallback(
+    (item: ClothingItem) => {
+      remember();
+      setOutfit((prev) => ({ ...prev, [item.slot]: item }));
+      setActiveSlot(item.slot);
+      playSound("select");
+    },
+    [playSound, remember]
+  );
+
+  const clearSlot = useCallback(
+    (slot: ClothingSlot) => {
+      remember();
+      setOutfit((prev) => ({ ...prev, [slot]: null }));
+      playSound("remove");
+    },
+    [playSound, remember]
+  );
+
+  const applyOutfit = useCallback(
+    (next: SelectedOutfit, sound: "select" | "shuffle" = "shuffle") => {
+      remember();
+      setOutfit({ ...next, accessory: next.accessory ?? null });
+      playSound(sound);
+    },
+    [playSound, remember]
+  );
+
+  const undoOutfit = useCallback(() => {
+    const history = historyRef.current;
+    if (history.length === 0) return;
+    const previous = history[history.length - 1];
+    setOutfitHistory((prev) => prev.slice(0, -1));
+    setOutfit(previous);
   }, []);
 
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      const slots: ClothingSlot[] = ["head", "top", "bottom", "feet"];
+    const handleKeyDown = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA")) return;
       const keyMap: Record<string, number> = { "1": 0, "2": 1, "3": 2, "4": 3 };
-      
-      if (e.key in keyMap) {
-        setActiveSlot(slots[keyMap[e.key]]);
-      } else if (e.key === "Escape") {
+      if (event.key in keyMap) {
+        setActiveSlot(DRESS_SLOTS[keyMap[event.key]]);
+      } else if (event.key === "Escape") {
         setActiveSlot(null);
         setShowCheckout(false);
-      } else if (e.key === "r" || e.key === "R") {
-        randomizeOutfit();
-      } else if (e.key === "u" || e.key === "U") {
+        setMenuItem(null);
+        setDiveItem(null);
+      } else if (event.key === "r" || event.key === "R") {
+        applyOutfit(randomOutfit());
+      } else if (event.key === "u" || event.key === "U") {
         undoOutfit();
-      } else if (e.key === "?" || e.key === "/") {
-        setShowKeyboardHints(prev => !prev);
+      } else if (event.key === "?" || (event.key === "/" && event.shiftKey)) {
+        setShowKeyboardHints((prev) => !prev);
       }
     };
-
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
+  }, [applyOutfit, undoOutfit]);
 
-  const playSound = useCallback((type: "select" | "remove" | "shuffle") => {
-    if (!soundEnabled) return;
-  }, [soundEnabled]);
+  const items = Object.values(outfit).filter((item): item is ClothingItem => item !== null);
+  const total = outfitTotal(outfit);
 
-  const getItemsForSlot = (slot: ClothingSlot) => {
-    return MOCK_INVENTORY.filter((item) => item.slot === slot);
+  const flash = (message: string) => {
+    setNotice(message);
+    window.setTimeout(() => setNotice(null), 2200);
   };
 
-  const selectItem = (item: ClothingItem) => {
-    setOutfitHistory(prev => [...prev.slice(-9), { ...outfit }]);
-    setOutfit((prev) => ({ ...prev, [item.slot]: item }));
-    playSound("select");
+  const saveCurrentLook = () => {
+    if (items.length === 0) return;
+    addLook(outfitItemIds(outfit), items.map((item) => item.brand).slice(0, 2).join(" + "));
+    flash("Saved to your looks");
   };
 
-  const clearSlot = (slot: ClothingSlot) => {
-    setOutfitHistory(prev => [...prev.slice(-9), { ...outfit }]);
-    setOutfit((prev) => ({ ...prev, [slot]: null }));
-    playSound("remove");
-  };
-
-  const randomizeOutfit = () => {
-    setOutfitHistory(prev => [...prev.slice(-9), { ...outfit }]);
-    const slots: ClothingSlot[] = ["head", "top", "bottom", "feet"];
-    const newOutfit: SelectedOutfit = {};
-    slots.forEach((slot) => {
-      const items = getItemsForSlot(slot);
-      const useItem = Math.random() > 0.2;
-      newOutfit[slot] = useItem ? items[Math.floor(Math.random() * items.length)] : null;
-    });
-    setOutfit(newOutfit);
-    playSound("shuffle");
-  };
-
-  const undoOutfit = () => {
-    if (outfitHistory.length > 0) {
-      const previousOutfit = outfitHistory[outfitHistory.length - 1];
-      setOutfitHistory(prev => prev.slice(0, -1));
-      setOutfit(previousOutfit);
+  const shareLook = async () => {
+    const summary = items
+      .map((item) => `${item.brand} ${item.name} — $${item.price}\n${item.affiliateUrl}`)
+      .join("\n\n");
+    const text = summary || "An empty look.";
+    try {
+      await navigator.clipboard.writeText(text);
+      flash("Copied the pieces and links");
+    } catch {
+      flash("Couldn't copy from this browser");
     }
   };
 
-  const getTotalPrice = () => {
-    return Object.values(outfit)
-      .filter((item): item is ClothingItem => item !== null)
-      .reduce((sum, item) => sum + item.price, 0);
-  };
-
-  const getOutfitItems = () => {
-    return Object.values(outfit).filter((item): item is ClothingItem => item !== null);
-  };
-
-  const saveOutfit = () => {
-    setSavedOutfits((prev) => [...prev, { ...outfit }]);
-  };
-
-  const handleTutorialComplete = () => {
-    localStorage.setItem(TUTORIAL_STORAGE_KEY, "true");
-    setShowTutorial(false);
-  };
-
-  const toggleSound = () => {
-    const newValue = !soundEnabled;
-    setSoundEnabled(newValue);
-    localStorage.setItem(SOUND_STORAGE_KEY, String(newValue));
+  const openCheckout = () => {
+    if (items.length === 0) return;
+    saveCurrentLook();
+    setShowCheckout(true);
   };
 
   const handleSlotClick = (slot: ClothingSlot) => {
-    setActiveSlot(activeSlot === slot ? null : slot);
+    if (!deepDive) {
+      setActiveSlot((current) => (current === slot ? null : slot));
+      return;
+    }
+    if (clickTimer.current) {
+      window.clearTimeout(clickTimer.current);
+      clickTimer.current = null;
+      return;
+    }
+    clickTimer.current = window.setTimeout(() => {
+      clickTimer.current = null;
+      setActiveSlot((current) => (current === slot ? null : slot));
+    }, 230);
   };
 
-  const handleApplyPreset = (presetOutfit: Record<string, ClothingItem | null>) => {
-    setOutfitHistory(prev => [...prev.slice(-9), { ...outfit }]);
-    setOutfit(presetOutfit);
-    playSound("shuffle");
-  };
-
-  const handleAddSuggestedItem = (item: ClothingItem) => {
-    selectItem(item);
-    setActiveSlot(item.slot);
+  const handlePieceDoubleClick = (slot: ClothingSlot) => {
+    if (clickTimer.current) {
+      window.clearTimeout(clickTimer.current);
+      clickTimer.current = null;
+    }
+    if (!deepDive) return;
+    const item = outfitRef.current[slot];
+    if (!item) return;
+    setMenuItem(item);
   };
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-brand-950 via-brand-900 to-brand-950 flex items-center justify-center">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="text-center"
-        >
-          <motion.div
-            animate={{ rotate: 360 }}
-            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-            className="w-12 h-12 mx-auto mb-4"
-          >
-            <Loader2 className="w-12 h-12 text-accent-500" />
-          </motion.div>
-          <p className="text-brand-400">Loading your experience...</p>
-        </motion.div>
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-brand-950 via-brand-900 to-brand-950">
+        <div className="text-center">
+          <Loader2 className="mx-auto mb-4 h-12 w-12 animate-spin text-accent-500" />
+          <p className="text-brand-400">Setting the dressing room...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-brand-950 via-brand-900 to-brand-950 text-white pt-20 overflow-hidden">
+    <div className="relative min-h-screen overflow-hidden bg-gradient-to-b from-brand-950 via-brand-900 to-brand-950 pt-20 text-white">
       <ParticleBackground />
 
       {showTutorial && (
         <OnboardingTutorial
-          onComplete={handleTutorialComplete}
-          onSkip={handleTutorialComplete}
+          onComplete={() => {
+            localStorage.setItem(TUTORIAL_STORAGE_KEY, "true");
+            setShowTutorial(false);
+          }}
+          onSkip={() => {
+            localStorage.setItem(TUTORIAL_STORAGE_KEY, "true");
+            setShowTutorial(false);
+          }}
         />
       )}
 
-      {/* Top Bar */}
-      <div className="fixed top-16 left-0 right-0 z-40 bg-brand-950/80 backdrop-blur-md border-b border-brand-800/50">
-        <div className="container-wide section-padding py-3 flex items-center justify-between">
+      <div className="fixed left-0 right-0 top-16 z-40 border-b border-brand-800/50 bg-brand-950/80 backdrop-blur-md">
+        <div className="container-wide section-padding flex items-center justify-between py-3">
           <Link
             href="/shop/create-avatar"
-            className="flex items-center gap-2 text-brand-400 hover:text-white transition-colors text-sm group"
+            className="group flex items-center gap-2 text-sm text-brand-400 transition-colors hover:text-white"
           >
-            <Camera className="w-4 h-4 group-hover:scale-110 transition-transform" />
-            <span className="hidden sm:inline">Edit Avatar</span>
+            <Camera className="h-4 w-4 transition-transform group-hover:scale-110" />
+            <span>{avatar ? "Edit who you're dressing" : "Make this you"}</span>
           </Link>
-          
+
           <div className="flex items-center gap-2 sm:gap-4">
             <button
+              type="button"
               onClick={undoOutfit}
               disabled={outfitHistory.length === 0}
-              className="flex items-center gap-1.5 text-brand-400 hover:text-white transition-colors text-sm disabled:opacity-30 disabled:cursor-not-allowed"
+              className="flex items-center gap-1.5 text-sm text-brand-400 transition-colors hover:text-white disabled:cursor-not-allowed disabled:opacity-30"
               title="Undo (U)"
             >
-              <Undo2 className="w-4 h-4" />
+              <Undo2 className="h-4 w-4" />
               <span className="hidden sm:inline">Undo</span>
             </button>
             <button
-              onClick={randomizeOutfit}
-              className="flex items-center gap-1.5 text-brand-400 hover:text-white transition-colors text-sm group"
+              type="button"
+              onClick={() => applyOutfit(randomOutfit())}
+              className="group flex items-center gap-1.5 text-sm text-brand-400 transition-colors hover:text-white"
               title="Randomize (R)"
             >
-              <Shuffle className="w-4 h-4 group-hover:rotate-180 transition-transform duration-500" />
-              <span className="hidden sm:inline">Randomize</span>
+              <Shuffle className="h-4 w-4 transition-transform duration-500 group-hover:rotate-180" />
+              <span className="hidden sm:inline">Shuffle</span>
             </button>
             <button
-              onClick={saveOutfit}
-              className="flex items-center gap-1.5 text-brand-400 hover:text-white transition-colors text-sm group"
+              type="button"
+              onClick={saveCurrentLook}
+              className="group flex items-center gap-1.5 text-sm text-brand-400 transition-colors hover:text-white"
             >
-              <Heart className="w-4 h-4 group-hover:scale-110 group-hover:text-red-400 transition-all" />
-              <span className="hidden sm:inline">Save Look</span>
+              <Heart className="h-4 w-4 transition-all group-hover:scale-110 group-hover:text-red-400" />
+              <span className="hidden sm:inline">Save look</span>
             </button>
-            <div className="w-px h-4 bg-brand-700 hidden sm:block" />
+            <div className="hidden h-4 w-px bg-brand-700 sm:block" />
             <button
-              onClick={toggleSound}
-              className="p-2 text-brand-400 hover:text-white transition-colors"
-              title={soundEnabled ? "Mute sounds" : "Enable sounds"}
+              type="button"
+              onClick={() => {
+                const next = !soundEnabled;
+                setSoundEnabled(next);
+                localStorage.setItem(SOUND_STORAGE_KEY, String(next));
+              }}
+              className="p-2 text-brand-400 transition-colors hover:text-white"
+              title={soundEnabled ? "Mute" : "Sound on"}
             >
-              {soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+              {soundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
             </button>
             <button
-              onClick={() => setShowKeyboardHints(prev => !prev)}
-              className="p-2 text-brand-400 hover:text-white transition-colors hidden sm:block"
-              title="Keyboard shortcuts (?)"
+              type="button"
+              onClick={() => setShowKeyboardHints((prev) => !prev)}
+              className="hidden p-2 text-brand-400 transition-colors hover:text-white sm:block"
+              title="Keyboard shortcuts"
             >
-              <Keyboard className="w-4 h-4" />
+              <Keyboard className="h-4 w-4" />
             </button>
           </div>
         </div>
       </div>
 
-      {/* Keyboard shortcuts hint */}
       <AnimatePresence>
         {showKeyboardHints && (
           <motion.div
-            initial={{ opacity: 0, y: -20 }}
+            initial={{ opacity: 0, y: -12 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className="fixed top-32 left-1/2 -translate-x-1/2 z-50 bg-brand-800/95 backdrop-blur-sm rounded-xl border border-brand-700 p-4 shadow-2xl"
+            exit={{ opacity: 0, y: -12 }}
+            className="fixed left-1/2 top-32 z-50 -translate-x-1/2 rounded-xl border border-brand-700 bg-brand-800/95 p-4 shadow-2xl backdrop-blur-sm"
           >
-            <h4 className="text-sm font-medium text-white mb-3">Keyboard Shortcuts</h4>
             <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
-              <div className="flex items-center gap-2">
-                <kbd className="px-2 py-0.5 bg-brand-700 rounded text-xs">1-4</kbd>
-                <span className="text-brand-300">Select slot</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <kbd className="px-2 py-0.5 bg-brand-700 rounded text-xs">R</kbd>
-                <span className="text-brand-300">Randomize</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <kbd className="px-2 py-0.5 bg-brand-700 rounded text-xs">U</kbd>
-                <span className="text-brand-300">Undo</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <kbd className="px-2 py-0.5 bg-brand-700 rounded text-xs">Esc</kbd>
-                <span className="text-brand-300">Close</span>
-              </div>
+              <Hint keys="1–4" label="Open a piece" />
+              <Hint keys="R" label="Shuffle" />
+              <Hint keys="U" label="Undo" />
+              <Hint keys="Esc" label="Close" />
             </div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      <div className="pt-12 pb-32 relative z-10">
+      <AnimatePresence>
+        {notice && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            className="fixed left-1/2 top-32 z-50 flex -translate-x-1/2 items-center gap-2 rounded-full bg-white px-4 py-2 text-sm text-brand-900 shadow-xl"
+          >
+            <Check className="h-4 w-4 text-accent-600" />
+            {notice}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <div className="relative z-10 pb-32 pt-14">
         <div className="container-wide section-padding">
-          <div className="flex flex-col lg:flex-row gap-8 items-start">
-            {/* Left: Slot Selectors */}
-            <motion.div
-              {...menuHandlers}
-              className="hidden lg:flex flex-col gap-3 w-56 transition-opacity duration-500"
-              style={{ opacity: Math.max(0.3, menuOpacity) }}
-            >
-              <OutfitPresets
-                inventory={MOCK_INVENTORY}
-                onApplyPreset={handleApplyPreset}
-                className="mb-4"
-              />
-
-              {(["head", "top", "bottom", "feet"] as ClothingSlot[]).map((slot, index) => (
-                <EnhancedClothingSelector
-                  key={slot}
-                  slot={slot}
-                  label={SLOT_LABELS[slot]}
-                  items={getItemsForSlot(slot)}
-                  selectedItem={outfit[slot]}
-                  onSelect={(item) => selectItem(item)}
-                  onRemove={() => clearSlot(slot)}
-                  isActive={activeSlot === slot}
-                  onActivate={() => setActiveSlot(activeSlot === slot ? null : slot)}
-                  opacity={menuOpacity}
-                />
-              ))}
-            </motion.div>
-
-            {/* Center: Avatar */}
-            <div className="flex-1 flex justify-center">
-              <EnhancedAvatar
-                outfit={outfit}
-                activeSlot={activeSlot}
-                onSlotClick={handleSlotClick}
+          <div className="flex flex-col items-start gap-8 lg:flex-row">
+            <div className="hidden w-56 shrink-0 flex-col gap-4 xl:flex">
+              <OutfitPresets inventory={INVENTORY} onApplyPreset={(next) => applyOutfit(next as SelectedOutfit)} />
+              <CompleteTheLook
+                currentOutfit={outfit}
+                inventory={INVENTORY}
+                onAddItem={selectItem}
               />
             </div>
 
-            {/* Right: Suggestions */}
-            <motion.div
-              {...menuHandlers}
-              className="hidden lg:block w-64 transition-opacity duration-500"
-              style={{ opacity: Math.max(0.3, menuOpacity) }}
-            >
-              <CompleteTheLook
-                currentOutfit={outfit}
-                inventory={MOCK_INVENTORY}
-                onAddItem={handleAddSuggestedItem}
-              />
+            <div className="flex flex-1 justify-center">
+              <div className="w-full max-w-3xl">
+              <div className="mb-4 xl:hidden">
+                <OutfitPresets
+                  inventory={INVENTORY}
+                  defaultExpanded={false}
+                  onApplyPreset={(next) => applyOutfit(next as SelectedOutfit)}
+                />
+              </div>
+              <div className="relative h-[440px] w-full sm:h-[540px]" {...menuHandlers}>
+                <DressedFigure
+                  outfit={outfit}
+                  avatar={avatar}
+                  activeSlot={activeSlot}
+                  deepDive={deepDive}
+                  onSlotClick={handleSlotClick}
+                  onPieceDoubleClick={handlePieceDoubleClick}
+                  className="absolute left-1/2 top-0 h-[440px] w-72 -translate-x-1/2 sm:h-[540px] sm:w-80"
+                />
 
-              {/* Quick tips */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.5 }}
-                className="mt-6 p-4 bg-brand-800/30 rounded-xl border border-brand-700/50"
-              >
-                <p className="text-xs text-brand-400 leading-relaxed">
-                  <span className="text-accent-400 font-medium">Pro tip:</span> Click directly on your avatar to quickly select clothing slots, or use the menus on the left.
+                <div className="pointer-events-none absolute inset-0 hidden lg:block">
+                  {DRESS_SLOTS.map((slot) => (
+                    <div key={slot} className="pointer-events-auto">
+                      <GarmentRail
+                        label={SLOT_LABELS[slot]}
+                        items={itemsForSlot(slot)}
+                        selected={outfit[slot]}
+                        isActive={activeSlot === slot}
+                        opacity={Math.max(menuOpacity, activeSlot === slot ? 1 : 0)}
+                        className={RAIL_LAYOUT[slot]}
+                        openUp={slot === "feet"}
+                        onActivate={() =>
+                          setActiveSlot((current) => (current === slot ? null : slot))
+                        }
+                        onSelect={selectItem}
+                        onRemove={() => clearSlot(slot)}
+                      />
+                    </div>
+                  ))}
+                </div>
+
+              </div>
+                <p className="mx-auto mt-3 max-w-sm text-center text-xs text-brand-400">
+                  {avatar?.photoUrl
+                    ? "Your photo is the face. Clothes are drawn on the figure — this is not a generated try-on."
+                    : avatar
+                      ? `${BODY_TYPES[avatar.bodyType]} build · ${HAIR_STYLES[avatar.hairStyle].toLowerCase()} hair. Hover the figure to swap pieces.`
+                      : "Hover the figure. The piece menus fade until you come back."}
                 </p>
-              </motion.div>
-            </motion.div>
+              </div>
+            </div>
+
+            <div className="hidden w-60 shrink-0 xl:block">
+              <div className="rounded-2xl border border-brand-700/60 bg-brand-900/50 p-4">
+                <p className="text-xs uppercase tracking-[0.18em] text-accent-400">This look</p>
+                <p className="mt-2 font-display text-3xl text-white">${total.toFixed(0)}</p>
+                <p className="mt-1 text-sm text-brand-400">
+                  {items.length === 0
+                    ? "Nothing on yet."
+                    : `${items.length} partner ${items.length === 1 ? "piece" : "pieces"}`}
+                </p>
+                <ul className="mt-4 space-y-2">
+                  {items.map((item) => (
+                    <li key={item.id} className="flex items-center gap-2 text-sm">
+                      <span
+                        className="h-3 w-3 rounded-full border border-white/20"
+                        style={{ backgroundColor: item.color }}
+                      />
+                      <span className="truncate text-brand-100">{item.name}</span>
+                    </li>
+                  ))}
+                </ul>
+                <Link
+                  href="/cart"
+                  className="mt-4 inline-flex text-sm text-brand-300 underline-offset-4 hover:text-white hover:underline"
+                >
+                  Open saved looks
+                </Link>
+              </div>
+            </div>
           </div>
 
-          {/* Mobile Slot Selector */}
-          <div className="lg:hidden mt-8">
-            <div className="flex gap-2 overflow-x-auto pb-4 scrollbar-hide">
-              {(["head", "top", "bottom", "feet"] as ClothingSlot[]).map((slot) => (
+          <div className="mt-8 lg:hidden">
+            <div className="flex gap-2 overflow-x-auto pb-3">
+              {DRESS_SLOTS.map((slot) => (
                 <button
                   key={slot}
-                  onClick={() => setActiveSlot(activeSlot === slot ? null : slot)}
+                  type="button"
+                  onClick={() => setActiveSlot((current) => (current === slot ? null : slot))}
                   className={cn(
-                    "px-4 py-2.5 rounded-full whitespace-nowrap text-sm font-medium transition-all",
+                    "whitespace-nowrap rounded-full px-4 py-2.5 text-sm font-medium",
                     activeSlot === slot
-                      ? "bg-gradient-to-r from-accent-500 to-accent-600 text-white shadow-lg shadow-accent-500/25"
-                      : "bg-brand-800 text-brand-300 border border-brand-700"
+                      ? "bg-accent-500 text-white"
+                      : "border border-brand-700 bg-brand-800 text-brand-300"
                   )}
                 >
                   {SLOT_LABELS[slot]}
-                  {outfit[slot] && (
-                    <span className="ml-1.5 inline-block w-2 h-2 bg-green-400 rounded-full" />
-                  )}
                 </button>
               ))}
             </div>
-
+            {deepDive && activeSlot && outfit[activeSlot] && (
+              <button
+                type="button"
+                onClick={() => setDiveItem(outfit[activeSlot])}
+                className="mb-3 rounded-full bg-white px-4 py-2 text-sm text-brand-950"
+              >
+                Look closer at {outfit[activeSlot]?.name}
+              </button>
+            )}
             <AnimatePresence mode="wait">
               {activeSlot && (
                 <motion.div
@@ -430,28 +526,29 @@ export default function ShopExperiencePage() {
                   exit={{ opacity: 0, height: 0 }}
                   className="overflow-hidden"
                 >
-                  <div className="flex gap-3 overflow-x-auto py-4 scrollbar-hide">
-                    {getItemsForSlot(activeSlot).map((item) => (
-                      <motion.button
+                  <div className="flex gap-3 overflow-x-auto py-3">
+                    {itemsForSlot(activeSlot).map((item) => (
+                      <button
                         key={item.id}
+                        type="button"
                         onClick={() => selectItem(item)}
-                        whileTap={{ scale: 0.95 }}
                         className={cn(
-                          "flex-shrink-0 w-36 p-3 rounded-xl transition-all",
+                          "w-40 shrink-0 rounded-xl p-3 text-left",
                           outfit[activeSlot]?.id === item.id
-                            ? "bg-gradient-to-br from-accent-500/20 to-accent-600/10 border-2 border-accent-500"
-                            : "bg-brand-800 border border-brand-700"
+                            ? "border-2 border-accent-500 bg-accent-500/15"
+                            : "border border-brand-700 bg-brand-800"
                         )}
                       >
-                        <div className="w-full h-24 bg-gradient-to-br from-brand-600 to-brand-700 rounded-lg mb-2 flex items-center justify-center">
-                          <span className="text-2xl font-bold text-white/30">{item.name.charAt(0)}</span>
-                        </div>
-                        <p className="text-white text-sm font-medium truncate">{item.name}</p>
-                        <div className="flex items-center justify-between mt-1">
-                          <p className="text-brand-400 text-xs">{item.brand}</p>
-                          <p className="text-accent-400 text-sm font-medium">${item.price}</p>
-                        </div>
-                      </motion.button>
+                        <span
+                          className="mb-2 block h-16 rounded-lg border border-white/10"
+                          style={{ backgroundColor: item.color }}
+                        />
+                        <span className="block truncate text-sm text-white">{item.name}</span>
+                        <span className="mt-1 flex items-center justify-between text-xs text-brand-400">
+                          {item.brand}
+                          <span className="text-accent-300">${item.price}</span>
+                        </span>
+                      </button>
                     ))}
                   </div>
                 </motion.div>
@@ -461,96 +558,141 @@ export default function ShopExperiencePage() {
         </div>
       </div>
 
-      {/* Bottom Checkout Bar */}
       <EnhancedCheckoutBar
-        items={getOutfitItems()}
+        items={items}
         onRemoveItem={clearSlot}
-        onCheckout={() => setShowCheckout(true)}
-        onShare={() => {}}
+        onCheckout={openCheckout}
+        onShare={shareLook}
+        deepDive={deepDive}
+        onToggleDeepDive={() => {
+          setDeepDive((current) => {
+            const next = !current;
+            localStorage.setItem(DEEP_DIVE_KEY, String(next));
+            if (!next) setMenuItem(null);
+            return next;
+          });
+        }}
       />
 
-      {/* Checkout Modal */}
+      <AnimatePresence>
+        {menuItem && (
+          <PieceQuickMenu
+            item={menuItem}
+            onClose={() => setMenuItem(null)}
+            onLookCloser={() => {
+              setDiveItem(menuItem);
+              setMenuItem(null);
+            }}
+            onSwap={() => {
+              setActiveSlot(menuItem.slot);
+              setMenuItem(null);
+            }}
+            onRemove={() => {
+              clearSlot(menuItem.slot);
+              setMenuItem(null);
+            }}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {diveItem && <DeepDive item={diveItem} onClose={() => setDiveItem(null)} />}
+      </AnimatePresence>
+
       <AnimatePresence>
         {showCheckout && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm"
             onClick={() => setShowCheckout(false)}
           >
             <motion.div
-              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              initial={{ scale: 0.96, opacity: 0, y: 12 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.9, opacity: 0, y: 20 }}
-              className="bg-gradient-to-b from-brand-800 to-brand-900 rounded-3xl p-6 max-w-lg w-full shadow-2xl border border-brand-700"
-              onClick={(e) => e.stopPropagation()}
+              exit={{ scale: 0.96, opacity: 0, y: 12 }}
+              className="w-full max-w-lg rounded-3xl border border-brand-700 bg-gradient-to-b from-brand-800 to-brand-900 p-6 shadow-2xl"
+              onClick={(event) => event.stopPropagation()}
             >
-              <div className="flex items-center justify-between mb-2">
-                <h2 className="font-display text-2xl text-white">Your Look</h2>
+              <div className="mb-2 flex items-center justify-between">
+                <h2 className="font-display text-2xl text-white">Get this look</h2>
                 <button
+                  type="button"
                   onClick={() => setShowCheckout(false)}
-                  className="p-2 rounded-full hover:bg-brand-700 transition-colors"
+                  className="rounded-full p-2 hover:bg-brand-700"
                 >
                   <span className="sr-only">Close</span>
                   ✕
                 </button>
               </div>
-              <p className="text-brand-400 text-sm mb-6">
-                These items are from our affiliate partners. Click to purchase from their sites.
+              <p className="mb-6 text-sm text-brand-300">
+                Saved in your looks. Each piece opens on the maker&apos;s site. These are not
+                tracked affiliate links yet — when that exists, the purchase can support the company.
               </p>
-
-              <div className="space-y-3 mb-6 max-h-64 overflow-y-auto scrollbar-hide">
-                {getOutfitItems().map((item, index) => (
-                  <motion.a
+              <div className="mb-6 max-h-[22rem] space-y-3 overflow-y-auto">
+                {items.map((item) => (
+                  <a
                     key={item.id}
                     href={item.affiliateUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: index * 0.1 }}
-                    className="flex items-center justify-between p-3 bg-brand-800/50 rounded-xl hover:bg-brand-700/50 transition-colors group"
+                    className="flex items-center justify-between rounded-xl bg-brand-800/60 p-3 transition-colors hover:bg-brand-700/60"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="w-14 h-14 bg-gradient-to-br from-brand-600 to-brand-700 rounded-xl flex items-center justify-center">
-                        <span className="text-xl font-bold text-white/30">{item.name.charAt(0)}</span>
-                      </div>
-                      <div>
-                        <p className="text-white font-medium">{item.name}</p>
-                        <p className="text-brand-400 text-sm">{item.brand}</p>
-                      </div>
+                      <span
+                        className="h-12 w-12 rounded-xl border border-white/10"
+                        style={{ backgroundColor: item.color }}
+                      />
+                      <span>
+                        <span className="block font-medium text-white">{item.name}</span>
+                        <span className="block text-sm text-brand-400">{item.brand}</span>
+                      </span>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <span className="text-accent-400 font-medium">${item.price}</span>
-                      <ExternalLink className="w-4 h-4 text-brand-500 group-hover:text-accent-400 transition-colors" />
-                    </div>
-                  </motion.a>
+                    <span className="flex items-center gap-2 text-accent-300">
+                      ${item.price}
+                      <ExternalLink className="h-4 w-4" />
+                    </span>
+                  </a>
                 ))}
               </div>
-
-              <div className="flex items-center justify-between pt-4 border-t border-brand-700">
+              <div className="flex items-center justify-between border-t border-brand-700 pt-4">
                 <div>
-                  <p className="text-brand-400 text-sm">Total</p>
-                  <p className="text-3xl font-display text-white">
-                    ${getTotalPrice().toFixed(2)}
-                  </p>
+                  <p className="text-sm text-brand-400">Together</p>
+                  <p className="font-display text-3xl text-white">${total.toFixed(2)}</p>
                 </div>
-                <button
-                  onClick={() => setShowCheckout(false)}
-                  className="px-6 py-3 bg-brand-700 text-brand-300 rounded-full hover:bg-brand-600 hover:text-white transition-colors"
+                <Link
+                  href="/cart"
+                  className="rounded-full bg-white px-5 py-3 text-sm font-medium text-brand-950"
                 >
-                  Keep Shopping
-                </button>
+                  View saved looks
+                </Link>
               </div>
-
-              <p className="text-xs text-brand-500 text-center mt-4">
-                Purchases support Revolution through affiliate commissions
-              </p>
             </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
+    </div>
+  );
+}
+
+function outfitFromItemList(value: string): SelectedOutfit | null {
+  const next = emptyOutfit();
+  let found = false;
+  value.split(",").forEach((id) => {
+    const item = itemById(id.trim());
+    if (!item) return;
+    next[item.slot] = item;
+    found = true;
+  });
+  return found ? next : null;
+}
+
+function Hint({ keys, label }: { keys: string; label: string }) {
+  return (
+    <div className="flex items-center gap-2">
+      <kbd className="rounded bg-brand-700 px-2 py-0.5 text-xs">{keys}</kbd>
+      <span className="text-brand-300">{label}</span>
     </div>
   );
 }

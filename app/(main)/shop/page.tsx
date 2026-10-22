@@ -38,6 +38,13 @@ export default function ShopPage() {
             <h1 className="font-display text-3xl text-brand-900">
               Create Your Look
             </h1>
+            <p className="mt-2 text-brand-600">
+              The dressing room is where outfits actually change.{" "}
+              <a href="/shop/experience" className="text-accent-600 underline">
+                Open it
+              </a>
+              .
+            </p>
             <p className="text-brand-600 mt-1">
               Click on clothing items to customize your outfit
             </p>

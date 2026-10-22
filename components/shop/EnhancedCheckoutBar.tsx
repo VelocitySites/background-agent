@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ShoppingBag, Share2, ChevronUp, ExternalLink, X, Sparkles } from "lucide-react";
+import { ShoppingBag, Share2, ChevronUp, ExternalLink, X, Sparkles, ScanSearch } from "lucide-react";
 
 type ClothingSlot = "head" | "top" | "bottom" | "feet" | "accessory";
 
@@ -15,6 +15,7 @@ interface ClothingItem {
   imageUrl: string;
   slot: ClothingSlot;
   colors: string[];
+  color?: string;
   style: string[];
 }
 
@@ -23,6 +24,8 @@ interface EnhancedCheckoutBarProps {
   onRemoveItem: (slot: ClothingSlot) => void;
   onCheckout: () => void;
   onShare: () => void;
+  deepDive?: boolean;
+  onToggleDeepDive?: () => void;
 }
 
 const SLOT_ORDER: ClothingSlot[] = ["head", "top", "bottom", "feet"];
@@ -32,6 +35,8 @@ export function EnhancedCheckoutBar({
   onRemoveItem,
   onCheckout,
   onShare,
+  deepDive = false,
+  onToggleDeepDive,
 }: EnhancedCheckoutBarProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const total = items.reduce((sum, item) => sum + item.price, 0);
@@ -84,9 +89,10 @@ export function EnhancedCheckoutBar({
                       </button>
 
                       {/* Item thumbnail */}
-                      <div className="w-full aspect-square rounded-lg bg-gradient-to-br from-brand-600 to-brand-700 mb-2 flex items-center justify-center">
-                        <span className="text-3xl font-bold text-white/20">{item.name.charAt(0)}</span>
-                      </div>
+                      <div
+                        className="mb-2 aspect-square w-full rounded-lg border border-white/10"
+                        style={{ backgroundColor: item.color ?? "#4b5563" }}
+                      />
 
                       {/* Item info */}
                       <p className="text-sm text-white font-medium truncate">{item.name}</p>
@@ -121,6 +127,31 @@ export function EnhancedCheckoutBar({
 
       {/* Main bar */}
       <div className="bg-gradient-to-r from-brand-950 via-brand-900 to-brand-950 border-t border-brand-700 backdrop-blur-lg">
+        {onToggleDeepDive && (
+          <div className="container-wide section-padding flex items-center justify-between gap-3 border-b border-brand-800/80 py-2">
+            <button
+              type="button"
+              onClick={onToggleDeepDive}
+              aria-pressed={deepDive}
+              className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm transition-colors ${
+                deepDive
+                  ? "bg-accent-500 text-white"
+                  : "bg-brand-800 text-brand-200 hover:text-white"
+              }`}
+            >
+              <ScanSearch className="h-4 w-4" />
+              Deep dive
+              <span className="text-[11px] uppercase tracking-wide opacity-80">
+                {deepDive ? "On" : "Off"}
+              </span>
+            </button>
+            <p className="hidden text-xs text-brand-400 sm:block">
+              {deepDive
+                ? "Hover a piece, then double-click. Scroll in for the cloth, the source, the chain, and the place."
+                : "Turn this on to read a piece instead of only wearing it."}
+            </p>
+          </div>
+        )}
         <div className="container-wide section-padding py-3">
           <div className="flex items-center gap-4">
             {/* Item thumbnails */}
@@ -137,9 +168,10 @@ export function EnhancedCheckoutBar({
                     className="relative group"
                     style={{ zIndex: sortedItems.length - index }}
                   >
-                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-brand-600 to-brand-700 flex items-center justify-center border-2 border-brand-500 shadow-lg overflow-hidden">
-                      <span className="text-lg font-bold text-white/40">{item.name.charAt(0)}</span>
-                    </div>
+                    <div
+                      className="h-12 w-12 rounded-xl border-2 border-brand-500 shadow-lg"
+                      style={{ backgroundColor: item.color ?? "#4b5563" }}
+                    />
 
                     {/* Hover tooltip */}
                     <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">

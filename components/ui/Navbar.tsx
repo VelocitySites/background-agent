@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { ShoppingBag, Menu, X, User } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { LOOKS_EVENT, loadLooks } from "@/lib/shop/looks";
 
 const NAV_LINKS = [
   { href: "/shop/experience", label: "Shop" },
@@ -16,7 +16,18 @@ const NAV_LINKS = [
 
 export function Navbar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [cartCount] = useState(0);
+  const [cartCount, setCartCount] = useState(0);
+
+  useEffect(() => {
+    const sync = () => setCartCount(loadLooks().length);
+    sync();
+    window.addEventListener(LOOKS_EVENT, sync);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.removeEventListener(LOOKS_EVENT, sync);
+      window.removeEventListener("storage", sync);
+    };
+  }, []);
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-brand-50/80 backdrop-blur-md border-b border-brand-200/50">

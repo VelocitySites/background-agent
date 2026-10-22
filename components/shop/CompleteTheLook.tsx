@@ -3,20 +3,8 @@
 import { useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Lightbulb, Plus, ChevronRight } from "lucide-react";
-
-type ClothingSlot = "head" | "top" | "bottom" | "feet" | "accessory";
-
-interface ClothingItem {
-  id: string;
-  name: string;
-  brand: string;
-  price: number;
-  affiliateUrl: string;
-  imageUrl: string;
-  slot: ClothingSlot;
-  colors: string[];
-  style: string[];
-}
+import type { ClothingItem } from "@/lib/shop/catalog";
+import type { ClothingSlot } from "@/types";
 
 interface CompleteTheLookProps {
   currentOutfit: Record<string, ClothingItem | null>;

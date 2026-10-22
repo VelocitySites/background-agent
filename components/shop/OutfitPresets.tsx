@@ -2,106 +2,40 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, ChevronLeft, ChevronRight, Zap, Crown, Flame, Leaf } from "lucide-react";
+import { Sparkles, ChevronLeft, ChevronRight, Zap, Crown, Flame, Leaf, Shirt } from "lucide-react";
+import { LOOK_PRESETS, itemById, type ClothingItem, type LookPreset } from "@/lib/shop/catalog";
+import type { ClothingSlot } from "@/types";
 
-type ClothingSlot = "head" | "top" | "bottom" | "feet" | "accessory";
-
-interface ClothingItem {
-  id: string;
-  name: string;
-  brand: string;
-  price: number;
-  affiliateUrl: string;
-  imageUrl: string;
-  slot: ClothingSlot;
-  colors: string[];
-  style: string[];
-}
-
-interface OutfitPreset {
-  id: string;
-  name: string;
-  description: string;
-  icon: React.ElementType;
-  gradient: string;
-  items: Record<ClothingSlot, string | null>;
-}
+const PRESET_ICONS: Record<string, React.ElementType> = {
+  "street-king": Crown,
+  minimalist: Leaf,
+  "fire-fit": Flame,
+  athlete: Zap,
+  classic: Shirt,
+};
 
 interface OutfitPresetsProps {
   inventory: ClothingItem[];
   onApplyPreset: (outfit: Record<string, ClothingItem | null>) => void;
   className?: string;
+  defaultExpanded?: boolean;
 }
 
-const PRESETS: OutfitPreset[] = [
-  {
-    id: "street-king",
-    name: "Street King",
-    description: "Urban edge with premium comfort",
-    icon: Crown,
-    gradient: "from-purple-500 to-indigo-600",
-    items: {
-      head: "h1",
-      top: "t2",
-      bottom: "b2",
-      feet: "f2",
-      accessory: null,
-    },
-  },
-  {
-    id: "minimalist",
-    name: "Clean & Simple",
-    description: "Timeless essentials that work",
-    icon: Leaf,
-    gradient: "from-emerald-500 to-teal-600",
-    items: {
-      head: null,
-      top: "t1",
-      bottom: "b1",
-      feet: "f1",
-      accessory: null,
-    },
-  },
-  {
-    id: "fire-fit",
-    name: "Fire Fit",
-    description: "Turn heads everywhere you go",
-    icon: Flame,
-    gradient: "from-orange-500 to-red-600",
-    items: {
-      head: "h3",
-      top: "t4",
-      bottom: "b3",
-      feet: "f2",
-      accessory: null,
-    },
-  },
-  {
-    id: "athlete",
-    name: "Sport Mode",
-    description: "Performance meets style",
-    icon: Zap,
-    gradient: "from-cyan-500 to-blue-600",
-    items: {
-      head: "h1",
-      top: "t2",
-      bottom: "b2",
-      feet: "f3",
-      accessory: null,
-    },
-  },
-];
-
-export function OutfitPresets({ inventory, onApplyPreset, className = "" }: OutfitPresetsProps) {
+export function OutfitPresets({
+  inventory,
+  onApplyPreset,
+  className = "",
+  defaultExpanded = true,
+}: OutfitPresetsProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(defaultExpanded);
 
   const getItemById = (id: string | null): ClothingItem | null => {
     if (!id) return null;
-    return inventory.find((item) => item.id === id) || null;
+    return inventory.find((item) => item.id === id) || itemById(id);
   };
 
-  const applyPreset = (preset: OutfitPreset) => {
+  const applyPreset = (preset: LookPreset) => {
     const outfit: Record<string, ClothingItem | null> = {};
     (Object.keys(preset.items) as ClothingSlot[]).forEach((slot) => {
       outfit[slot] = getItemById(preset.items[slot]);
@@ -109,7 +43,7 @@ export function OutfitPresets({ inventory, onApplyPreset, className = "" }: Outf
     onApplyPreset(outfit);
   };
 
-  const calculatePresetTotal = (preset: OutfitPreset): number => {
+  const calculatePresetTotal = (preset: LookPreset): number => {
     return Object.values(preset.items)
       .filter((id): id is string => id !== null)
       .map((id) => getItemById(id))
@@ -118,15 +52,15 @@ export function OutfitPresets({ inventory, onApplyPreset, className = "" }: Outf
   };
 
   const nextPreset = () => {
-    setCurrentIndex((prev) => (prev + 1) % PRESETS.length);
+    setCurrentIndex((prev) => (prev + 1) % LOOK_PRESETS.length);
   };
 
   const prevPreset = () => {
-    setCurrentIndex((prev) => (prev - 1 + PRESETS.length) % PRESETS.length);
+    setCurrentIndex((prev) => (prev - 1 + LOOK_PRESETS.length) % LOOK_PRESETS.length);
   };
 
-  const currentPreset = PRESETS[currentIndex];
-  const Icon = currentPreset.icon;
+  const currentPreset = LOOK_PRESETS[currentIndex];
+  const Icon = PRESET_ICONS[currentPreset.id] ?? Sparkles;
 
   return (
     <div className={className}>
@@ -210,7 +144,7 @@ export function OutfitPresets({ inventory, onApplyPreset, className = "" }: Outf
                     </div>
 
                     {/* Items preview */}
-                    <div className="flex gap-2 mb-3">
+                    <div className="mb-3 grid grid-cols-2 gap-2">
                       {Object.entries(currentPreset.items)
                         .filter(([_, id]) => id !== null)
                         .map(([slot, id]) => {
@@ -221,7 +155,7 @@ export function OutfitPresets({ inventory, onApplyPreset, className = "" }: Outf
                               key={slot}
                               className="flex-1 bg-white/20 backdrop-blur-sm rounded-lg p-2 text-center"
                             >
-                              <p className="text-white text-[10px] font-medium truncate">
+                              <p className="text-white text-[10px] font-medium leading-tight line-clamp-2">
                                 {item.name}
                               </p>
                               <p className="text-white/60 text-[10px]">${item.price}</p>
@@ -245,7 +179,7 @@ export function OutfitPresets({ inventory, onApplyPreset, className = "" }: Outf
 
               {/* Dots */}
               <div className="flex justify-center gap-1.5 mt-3">
-                {PRESETS.map((_, index) => (
+                {LOOK_PRESETS.map((_, index) => (
                   <button
                     key={index}
                     onClick={() => setCurrentIndex(index)}

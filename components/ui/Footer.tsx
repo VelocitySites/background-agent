@@ -38,15 +38,15 @@ export function Footer() {
             <ul className="space-y-2">
               <li>
                 <Link
-                  href="/shop"
+                  href="/shop/experience"
                   className="text-brand-400 hover:text-white transition-colors"
                 >
-                  All Products
+                  Dressing room
                 </Link>
               </li>
               <li>
                 <Link
-                  href="/shop/tops"
+                  href="/shop/experience?slot=top"
                   className="text-brand-400 hover:text-white transition-colors"
                 >
                   Tops
@@ -54,7 +54,7 @@ export function Footer() {
               </li>
               <li>
                 <Link
-                  href="/shop/bottoms"
+                  href="/shop/experience?slot=bottom"
                   className="text-brand-400 hover:text-white transition-colors"
                 >
                   Bottoms
@@ -62,10 +62,10 @@ export function Footer() {
               </li>
               <li>
                 <Link
-                  href="/shop/accessories"
+                  href="/shop/experience?slot=feet"
                   className="text-brand-400 hover:text-white transition-colors"
                 >
-                  Accessories
+                  Footwear
                 </Link>
               </li>
             </ul>

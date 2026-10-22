@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
+import Link from "next/link";
 import {
   DollarSign,
   TrendingUp,
@@ -12,6 +13,8 @@ import {
   PartyPopper,
   PiggyBank,
   Download,
+  ArrowRight,
+  TrendingDown,
 } from "lucide-react";
 
 interface QuarterData {
@@ -390,6 +393,76 @@ export default function TransparencyPage() {
               Download {currentData.quarter} {currentData.year} Report (PDF)
             </button>
           </div>
+        </div>
+      </section>
+
+      {/* Compensation Cap */}
+      <section className="py-12 section-padding">
+        <div className="container-wide">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="bg-white rounded-2xl shadow-sm border border-brand-200 overflow-hidden"
+          >
+            <div className="p-8">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                <div>
+                  <h2 className="font-display text-2xl text-brand-900 mb-2">
+                    Maximum Compensation
+                  </h2>
+                  <p className="text-brand-600">
+                    Total compensation (salary + profit share) is capped per person
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-4xl font-display text-brand-900">$435,600</p>
+                  <p className="text-brand-500 text-sm">2026 cap (adjusted for cost of living)</p>
+                </div>
+              </div>
+
+              <div className="mt-6 pt-6 border-t border-brand-200">
+                <p className="text-sm text-brand-600 mb-4">
+                  Adjusted annually based on our Real Cost of Living Index:
+                </p>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="bg-brand-50 rounded-lg p-3 text-center">
+                    <span className="text-lg">🏠</span>
+                    <p className="text-brand-700 text-sm font-medium mt-1">Housing</p>
+                    <p className="text-brand-500 text-xs">40% weight</p>
+                  </div>
+                  <div className="bg-brand-50 rounded-lg p-3 text-center">
+                    <span className="text-lg">🥛</span>
+                    <p className="text-brand-700 text-sm font-medium mt-1">Milk</p>
+                    <p className="text-brand-500 text-xs">20% weight</p>
+                  </div>
+                  <div className="bg-brand-50 rounded-lg p-3 text-center">
+                    <span className="text-lg">🥚</span>
+                    <p className="text-brand-700 text-sm font-medium mt-1">Eggs</p>
+                    <p className="text-brand-500 text-xs">20% weight</p>
+                  </div>
+                  <div className="bg-brand-50 rounded-lg p-3 text-center">
+                    <span className="text-lg">⛽</span>
+                    <p className="text-brand-700 text-sm font-medium mt-1">Gas</p>
+                    <p className="text-brand-500 text-xs">20% weight</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="px-8 py-4 bg-brand-50 border-t border-brand-200 flex items-center justify-between">
+              <p className="text-sm text-brand-600">
+                Base cap: $400,000 (2024) • Current index: 108.9
+              </p>
+              <Link
+                href="/transparency/cost-of-living"
+                className="flex items-center gap-2 text-accent-600 hover:text-accent-700 text-sm font-medium"
+              >
+                View Full Index
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+            </div>
+          </motion.div>
         </div>
       </section>
 

@@ -431,11 +431,64 @@ model FinancialQuarter {
 }
 
 model CompanyMetrics {
-  id                    String   @id @default(cuid())
-  baseSalary            Float    @default(70000)
-  profitSharePercent    Float    @default(75)
-  savingsPercent        Float    @default(25)
-  totalEmployees        Int
-  totalDistributedAllTime Float  @default(0)
-  updatedAt             DateTime @updatedAt
+  id                      String   @id @default(cuid())
+  baseSalary              Float    @default(70000)
+  profitSharePercent      Float    @default(75)
+  savingsPercent          Float    @default(25)
+  totalEmployees          Int
+  totalDistributedAllTime Float    @default(0)
+  
+  // Compensation cap
+  baseCompensationCap     Float    @default(400000)  // Starting cap (2024)
+  currentCompensationCap  Float    @default(400000)  // Adjusted for current year
+  
+  updatedAt               DateTime @updatedAt
+}
+
+// ============================================
+// COST OF LIVING INDEX
+// ============================================
+
+model CostOfLivingYear {
+  id                  String   @id @default(cuid())
+  year                Int      @unique
+  
+  // Individual metrics
+  housingIndex        Float    // Normalized to 100 for base year
+  milkPrice           Float    // Per gallon
+  eggsPrice           Float    // Per dozen
+  gasPrice            Float    // Per gallon
+  
+  // Calculated values
+  compositeIndex      Float    // Weighted combination
+  yearOverYearChange  Float?   // Percentage change from previous year
+  
+  // Impact on compensation
+  compensationCap     Float    // Adjusted cap for this year
+  
+  // Data sources / verification
+  housingSource       String?
+  grocerySource       String?
+  gasSource           String?
+  
+  verifiedAt          DateTime?
+  verifiedBy          String?
+  
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
+
+model CostOfLivingMetric {
+  id          String   @id @default(cuid())
+  year        Int
+  month       Int      // 1-12, for monthly tracking
+  
+  metric      String   // "housing", "milk", "eggs", "gas"
+  value       Float
+  source      String?
+  
+  createdAt   DateTime @default(now())
+
+  @@unique([year, month, metric])
+  @@index([year])
 }

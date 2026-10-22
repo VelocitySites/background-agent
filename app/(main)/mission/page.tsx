@@ -255,6 +255,57 @@ export default function MissionPage() {
               </p>
             </motion.div>
           </div>
+
+          {/* Compensation Cap */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="mt-8 bg-brand-800/30 rounded-2xl p-8 border border-brand-700"
+          >
+            <div className="flex flex-col md:flex-row md:items-center gap-8">
+              <div className="flex-1">
+                <h3 className="font-display text-2xl text-white mb-4">
+                  Maximum Compensation: $400,000
+                </h3>
+                <p className="text-brand-300 leading-relaxed">
+                  Total compensation (salary + profit share) is capped at $400,000 per person per year. 
+                  No one needs more than that. Any excess goes back into the company or to employees 
+                  below the cap.
+                </p>
+              </div>
+              <div className="bg-brand-900/50 rounded-xl p-6 text-center border border-brand-700">
+                <p className="text-brand-400 text-sm mb-2">Adjusted annually by</p>
+                <p className="text-2xl font-display text-accent-400">Real Cost of Living</p>
+                <p className="text-brand-500 text-xs mt-2">Not government CPI</p>
+              </div>
+            </div>
+            
+            <div className="mt-6 pt-6 border-t border-brand-700">
+              <p className="text-sm text-brand-400 mb-4">
+                We track real costs that real people pay:
+              </p>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="bg-brand-900/30 rounded-lg p-3 text-center">
+                  <span className="text-xl">🏠</span>
+                  <p className="text-brand-300 text-sm mt-1">Housing Index</p>
+                </div>
+                <div className="bg-brand-900/30 rounded-lg p-3 text-center">
+                  <span className="text-xl">🥛</span>
+                  <p className="text-brand-300 text-sm mt-1">Gallon of Milk</p>
+                </div>
+                <div className="bg-brand-900/30 rounded-lg p-3 text-center">
+                  <span className="text-xl">🥚</span>
+                  <p className="text-brand-300 text-sm mt-1">Carton of Eggs</p>
+                </div>
+                <div className="bg-brand-900/30 rounded-lg p-3 text-center">
+                  <span className="text-xl">⛽</span>
+                  <p className="text-brand-300 text-sm mt-1">Gallon of Gas</p>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+          </div>
         </div>
       </section>
 

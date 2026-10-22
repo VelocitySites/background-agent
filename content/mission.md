@@ -51,6 +51,23 @@ Not executives. Not shareholders. Employees. The people who actually do the work
 
 Distributions happen quarterly. Everyone sees the numbers. Everyone shares equally.
 
+### 4. Maximum Compensation: $400,000
+
+Total compensation (salary + profit share) is capped at **$400,000 per person per year**.
+
+No one needs more than that. If profit sharing would push someone above the cap, the excess goes back into the company or to employees below the cap.
+
+This cap adjusts annually based on our **Real Cost of Living Index**—not government CPI, which has been manipulated to undercount real inflation.
+
+We track what real people actually pay:
+
+- **Housing Index** (40% weight) — Median home prices and rent
+- **Gallon of Milk** (20% weight) — Grocery staple
+- **Carton of Eggs** (20% weight) — Grocery staple  
+- **Gallon of Gas** (20% weight) — Transportation cost
+
+When these go up, the cap goes up. When they go down, the cap goes down. Simple, transparent, tied to reality.
+
 ## Why This Matters
 
 Most companies exist to extract value. They take your labor, your creativity, your time—and they give the profits to people who already have more than they need.

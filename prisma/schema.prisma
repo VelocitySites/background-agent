@@ -236,3 +236,48 @@ model VisitorSession {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 }
+
+// ============================================
+// FINANCIAL TRANSPARENCY
+// ============================================
+
+model FinancialQuarter {
+  id                     String   @id @default(cuid())
+  quarter                String   // "Q1", "Q2", "Q3", "Q4"
+  year                   Int
+  revenue                Float
+  
+  // Expense breakdown
+  materialsCost          Float
+  laborCost              Float    // Total salaries (base)
+  advertisingCost        Float
+  operationsCost         Float
+  employeeEventsCost     Float
+  otherCost              Float
+  
+  // Profit distribution
+  netProfit              Float
+  savedAmount            Float    // 25% of profit
+  distributedAmount      Float    // 75% of profit
+  employeeCount          Int
+  perEmployeeDistribution Float
+  
+  // Meta
+  reportPdfUrl           String?
+  isPublished            Boolean  @default(false)
+  publishedAt            DateTime?
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  @@unique([quarter, year])
+}
+
+model CompanyMetrics {
+  id                    String   @id @default(cuid())
+  baseSalary            Float    @default(70000)
+  profitSharePercent    Float    @default(75)
+  savingsPercent        Float    @default(25)
+  totalEmployees        Int
+  totalDistributedAllTime Float  @default(0)
+  updatedAt             DateTime @updatedAt
+}

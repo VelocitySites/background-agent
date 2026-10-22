@@ -12,9 +12,9 @@ export function Footer() {
               Revolution
             </h3>
             <p className="text-brand-300 max-w-md leading-relaxed">
-              We believe that what you wear should reflect who you are and what
-              you stand for. Every piece we create carries the spirit of our
-              team.
+              Equal pay. 100% profit sharing. Full transparency. We're building 
+              proof that another way is possible. When you buy from us, you're 
+              voting for a different kind of capitalism.
             </p>
             <div className="flex gap-4 mt-6">
               <a
@@ -73,22 +73,30 @@ export function Footer() {
 
           {/* Company */}
           <div>
-            <h4 className="text-white font-medium mb-4">Company</h4>
+            <h4 className="text-white font-medium mb-4">The Revolution</h4>
             <ul className="space-y-2">
+              <li>
+                <Link
+                  href="/mission"
+                  className="text-brand-400 hover:text-white transition-colors"
+                >
+                  Our Mission
+                </Link>
+              </li>
               <li>
                 <Link
                   href="/about"
                   className="text-brand-400 hover:text-white transition-colors"
                 >
-                  Who We Are
+                  Our People
                 </Link>
               </li>
               <li>
                 <Link
-                  href="/about#team"
+                  href="/transparency"
                   className="text-brand-400 hover:text-white transition-colors"
                 >
-                  Our Team
+                  Our Finances
                 </Link>
               </li>
               <li>

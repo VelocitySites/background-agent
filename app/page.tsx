@@ -56,30 +56,37 @@ function WelcomeExperience({ onComplete }: { onComplete: () => void }) {
     {
       id: "hero",
       title: "Welcome to Revolution",
-      subtitle: "Where every thread tells a story",
+      subtitle: "This isn't a clothing company. It's a movement.",
     },
     {
-      id: "origin",
-      title: "Our Beginning",
+      id: "problem",
+      title: "The Problem",
       content:
-        "We started in a small garage with a single sewing machine and a vision: to create clothing that means something.",
+        "We live in a country that rewards profit above everything else. Our government is bought and paid for. Corruption runs deep. That's not changing from the top down.",
     },
     {
-      id: "mission",
-      title: "Our Mission",
+      id: "response",
+      title: "Our Response",
       content:
-        "We believe that what you wear should reflect who you are and what you stand for. Every piece we create carries the spirit of our team.",
+        "So we're building a company with political aims from day one. Equal pay for everyone. 100% profit sharing. Complete financial transparency. We're not here to play the game better—we're here to change the rules.",
+    },
+    {
+      id: "commitment",
+      title: "$70,000",
+      subtitle: "Base salary for every employee. No exceptions.",
+      content:
+        "From our founder to our janitor, everyone earns the same. Best possible benefits. And 75% of all profit, shared equally, every quarter.",
     },
     {
       id: "people",
-      title: "Our People",
+      title: "Real People. Real Stories.",
       content:
-        "From our founder to our newest team member, everyone here has a story worth sharing. And we share them all.",
+        "Every person here has a bio page. Because you should know who makes your clothes and why they believe in what we're building.",
     },
     {
       id: "enter",
-      title: "Enter the Experience",
-      content: "You're not just shopping. You're joining a movement.",
+      title: "Join the Revolution",
+      content: "When you buy from us, you're not making a CEO richer. You're voting for a different way of doing business.",
     },
   ];
 

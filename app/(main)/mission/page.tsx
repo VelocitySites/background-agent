@@ -268,10 +268,14 @@ export default function MissionPage() {
                 <h3 className="font-display text-2xl text-white mb-4">
                   Maximum Compensation: $400,000
                 </h3>
+                <p className="text-brand-300 leading-relaxed mb-4">
+                  Total compensation (salary + profit share) is capped at $400,000 per person per year.
+                  This is directly tied to our mission of reducing greed within capitalism.
+                </p>
                 <p className="text-brand-300 leading-relaxed">
-                  Total compensation (salary + profit share) is capped at $400,000 per person per year. 
-                  No one needs more than that. Any excess goes back into the company or to employees 
-                  below the cap.
+                  We want to make money—but we also want the opportunity to help others in the world 
+                  while doing so. We don't expect to hit our cap, but if we do, we'll have more than 
+                  enough to live a great life and focus on what actually matters.
                 </p>
               </div>
               <div className="bg-brand-900/50 rounded-xl p-6 text-center border border-brand-700">
@@ -280,10 +284,40 @@ export default function MissionPage() {
                 <p className="text-brand-500 text-xs mt-2">Not government CPI</p>
               </div>
             </div>
+
+            {/* What the cap means */}
+            <div className="mt-6 pt-6 border-t border-brand-700">
+              <p className="text-white font-medium mb-4">
+                What $400,000 means: freedom to focus on life, not accumulation.
+              </p>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                <div className="bg-brand-900/30 rounded-lg p-4 text-center">
+                  <span className="text-2xl">👨‍👩‍👧‍👦</span>
+                  <p className="text-brand-300 text-sm mt-2">Family time</p>
+                </div>
+                <div className="bg-brand-900/30 rounded-lg p-4 text-center">
+                  <span className="text-2xl">🎨</span>
+                  <p className="text-brand-300 text-sm mt-2">Creative pursuits</p>
+                </div>
+                <div className="bg-brand-900/30 rounded-lg p-4 text-center">
+                  <span className="text-2xl">🏔️</span>
+                  <p className="text-brand-300 text-sm mt-2">Hobbies & travel</p>
+                </div>
+                <div className="bg-brand-900/30 rounded-lg p-4 text-center">
+                  <span className="text-2xl">🤝</span>
+                  <p className="text-brand-300 text-sm mt-2">Helping others</p>
+                </div>
+              </div>
+              <p className="text-brand-400 text-sm">
+                You shouldn't be worrying about affording the next new car, the biggest house, or the 
+                latest phone. You have plenty for food, shelter, occasional travel, and the things 
+                that make life worth living.
+              </p>
+            </div>
             
             <div className="mt-6 pt-6 border-t border-brand-700">
               <p className="text-sm text-brand-400 mb-4">
-                We track real costs that real people pay:
+                Cap adjusts annually based on real costs that real people pay:
               </p>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="bg-brand-900/30 rounded-lg p-3 text-center">
@@ -302,6 +336,67 @@ export default function MissionPage() {
                   <span className="text-xl">⛽</span>
                   <p className="text-brand-300 text-sm mt-1">Gallon of Gas</p>
                 </div>
+              </div>
+            </div>
+          </motion.div>
+
+          {/* Family & Benefits */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6"
+          >
+            <div className="bg-brand-900/50 rounded-2xl p-8 border border-brand-800">
+              <div className="w-14 h-14 bg-pink-500/20 rounded-xl flex items-center justify-center mb-6">
+                <span className="text-3xl">👶</span>
+              </div>
+              <h3 className="font-display text-2xl text-white mb-4">
+                6 Months Parental Leave
+              </h3>
+              <p className="text-brand-300 leading-relaxed mb-4">
+                We encourage family-making. After 12 months at the company, all parents get 
+                6 months of paid parental leave. Birth, adoption, fostering—all count.
+              </p>
+              <p className="text-brand-400 text-sm">
+                Because your family should never compete with your paycheck.
+              </p>
+            </div>
+
+            <div className="bg-brand-900/50 rounded-2xl p-8 border border-brand-800">
+              <div className="w-14 h-14 bg-blue-500/20 rounded-xl flex items-center justify-center mb-6">
+                <span className="text-3xl">🏥</span>
+              </div>
+              <h3 className="font-display text-2xl text-white mb-4">
+                Best Possible Healthcare
+              </h3>
+              <p className="text-brand-300 leading-relaxed mb-4">
+                The same health insurance for everyone—the best we can provide. No tiers, 
+                no "executive plans." Your health isn't worth less because of your job title.
+              </p>
+              <p className="text-brand-400 text-sm">
+                Full coverage for you and your family.
+              </p>
+            </div>
+          </motion.div>
+
+          {/* Retirement Note */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="mt-8 bg-brand-800/20 rounded-xl p-6 border border-brand-700/50"
+          >
+            <div className="flex items-start gap-4">
+              <span className="text-2xl">🔮</span>
+              <div>
+                <h4 className="text-white font-medium mb-2">Retirement: We're Working On It</h4>
+                <p className="text-brand-400 text-sm">
+                  We believe everyone deserves a secure retirement, but we haven't figured out 
+                  the best approach yet. Traditional 401(k)s have problems. We're exploring 
+                  alternatives that align with our values. This section will update as we 
+                  develop a solution worth implementing.
+                </p>
               </div>
             </div>
           </motion.div>

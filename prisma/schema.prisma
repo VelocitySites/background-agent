@@ -1,0 +1,494 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// TEAM & COMPANY
+// ============================================
+
+model TeamMember {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  name        String
+  role        String
+  title       String
+  quote       String
+  bio         String   @db.Text
+  funFacts    String[]
+  heroImage   String
+  gallery     String[]
+  socialLinks Json?
+  order       Int
+  joinedAt    DateTime
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// ============================================
+// PRODUCTS & INVENTORY
+// ============================================
+
+model Category {
+  id          String    @id @default(cuid())
+  name        String
+  slug        String    @unique
+  description String?
+  slot        String    // "head", "top", "bottom", "feet", "accessory"
+  order       Int
+  products    Product[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Product {
+  id           String         @id @default(cuid())
+  name         String
+  slug         String         @unique
+  description  String         @db.Text
+  price        Float
+  comparePrice Float?
+  categoryId   String
+  category     Category       @relation(fields: [categoryId], references: [id])
+  variants     ProductVariant[]
+  images       ProductImage[]
+  modelImages  ModelImage[]
+  isActive     Boolean        @default(true)
+  isFeatured   Boolean        @default(false)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  @@index([categoryId])
+}
+
+model ProductVariant {
+  id        String      @id @default(cuid())
+  productId String
+  product   Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
+  size      String
+  color     String
+  colorHex  String?
+  stock     Int         @default(0)
+  sku       String      @unique
+  cartItems CartItem[]
+  orderItems OrderItem[]
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  @@unique([productId, size, color])
+  @@index([productId])
+}
+
+model ProductImage {
+  id        String  @id @default(cuid())
+  url       String
+  alt       String
+  order     Int
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+}
+
+model ModelImage {
+  id        String  @id @default(cuid())
+  url       String
+  alt       String
+  slot      String  // Which part of the model this image represents
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+}
+
+// ============================================
+// OUTFITS (Pre-configured model looks)
+// ============================================
+
+model Outfit {
+  id          String       @id @default(cuid())
+  name        String
+  slug        String       @unique
+  description String?
+  heroImage   String       // Full model image wearing this outfit
+  items       OutfitItem[]
+  isActive    Boolean      @default(true)
+  isFeatured  Boolean      @default(false)
+  order       Int
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+model OutfitItem {
+  id        String @id @default(cuid())
+  outfitId  String
+  outfit    Outfit @relation(fields: [outfitId], references: [id], onDelete: Cascade)
+  productId String
+  slot      String // "head", "top", "bottom", "feet"
+
+  @@index([outfitId])
+}
+
+// ============================================
+// SHOPPING
+// ============================================
+
+model Cart {
+  id        String     @id @default(cuid())
+  sessionId String?    @unique
+  userId    String?    @unique
+  items     CartItem[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+}
+
+model CartItem {
+  id        String         @id @default(cuid())
+  cartId    String
+  cart      Cart           @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  variantId String
+  variant   ProductVariant @relation(fields: [variantId], references: [id])
+  quantity  Int
+
+  @@unique([cartId, variantId])
+  @@index([cartId])
+}
+
+// ============================================
+// ORDERS
+// ============================================
+
+model Order {
+  id              String      @id @default(cuid())
+  orderNumber     String      @unique
+  email           String
+  status          OrderStatus @default(PENDING)
+  subtotal        Float
+  shipping        Float
+  tax             Float
+  total           Float
+  shippingAddress Json
+  billingAddress  Json
+  stripePaymentId String?
+  items           OrderItem[]
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  @@index([email])
+  @@index([status])
+}
+
+model OrderItem {
+  id          String         @id @default(cuid())
+  orderId     String
+  order       Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  variantId   String
+  variant     ProductVariant @relation(fields: [variantId], references: [id])
+  productName String
+  variantInfo String         // "Size M, Black"
+  price       Float
+  quantity    Int
+
+  @@index([orderId])
+}
+
+enum OrderStatus {
+  PENDING
+  PAID
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+  REFUNDED
+}
+
+// ============================================
+// CONTENT & STORY
+// ============================================
+
+model StorySection {
+  id        String   @id @default(cuid())
+  slug      String   @unique
+  title     String
+  content   String   @db.Text
+  mediaUrl  String?
+  mediaType String?  // "image", "video"
+  order     Int
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ============================================
+// USER PROFILES & AVATARS
+// ============================================
+
+model UserProfile {
+  id                String    @id @default(cuid())
+  email             String    @unique
+  name              String?
+  
+  // Avatar configuration
+  avatarMode        String    @default("random") // "random", "customize", "photo"
+  avatarPhotoUrl    String?
+  avatarSkinTone    Int       @default(2)
+  avatarHairStyle   Int       @default(0)
+  avatarHairColor   Int       @default(0)
+  avatarBodyType    Int       @default(2)
+  
+  // Body measurements
+  height            String?
+  weight            String?
+  chestSize         String?
+  waistSize         String?
+  hipSize           String?
+  inseamLength      String?
+  shoeSize          String?
+  
+  // Size recommendations (calculated from measurements)
+  recommendedTopSize      String?
+  recommendedBottomSize   String?
+  recommendedOuterwearSize String?
+  recommendedShoeSize     String?
+  
+  // Preferences
+  preferredStyles   String[]
+  savedOutfits      SavedOutfit[]
+  
+  hasCompletedOnboarding Boolean @default(false)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+model SavedOutfit {
+  id          String      @id @default(cuid())
+  userId      String
+  user        UserProfile @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String?
+  items       Json        // Array of product IDs and variants
+  totalPrice  Float
+  createdAt   DateTime    @default(now())
+
+  @@index([userId])
+}
+
+model VisitorSession {
+  id              String   @id @default(cuid())
+  sessionId       String   @unique
+  hasCompletedIntro Boolean @default(false)
+  savedLookUrl    String?
+  avatarConfig    Json?    // Temporary avatar config before account creation
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+// ============================================
+// ECOSYSTEM & COMPANIES
+// ============================================
+
+model EcosystemCompany {
+  id              String   @id @default(cuid())
+  slug            String   @unique
+  name            String
+  industry        String
+  description     String   @db.Text
+  logoUrl         String?
+  websiteUrl      String?
+  
+  // Join type
+  joinType        String   // "founding", "merged", "acquired", "launched"
+  joinDate        DateTime
+  
+  // Current metrics
+  employeeCount   Int
+  baseSalary      Float    @default(70000)
+  
+  // Status
+  isActive        Boolean  @default(true)
+  isPublic        Boolean  @default(true)
+  
+  // Financials are separate for merged companies
+  hasSeparateFinancials Boolean @default(false)
+  
+  teamMembers     TeamMember[]
+  financials      FinancialQuarter[]
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model EcosystemApplication {
+  id              String   @id @default(cuid())
+  
+  // Applicant info
+  contactName     String
+  contactEmail    String
+  companyName     String?
+  industry        String
+  
+  // Application type
+  applicationType String   // "merge", "acquisition", "launch", "suggest_industry"
+  
+  // Details
+  description     String   @db.Text
+  whyJoin         String   @db.Text
+  currentRevenue  String?
+  employeeCount   Int?
+  websiteUrl      String?
+  
+  // Status
+  status          String   @default("pending") // "pending", "reviewing", "accepted", "rejected"
+  reviewNotes     String?  @db.Text
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+// ============================================
+// AFFILIATE PRODUCTS
+// ============================================
+
+model AffiliateProduct {
+  id              String   @id @default(cuid())
+  externalId      String?  // ID from affiliate network
+  name            String
+  brand           String
+  description     String?  @db.Text
+  price           Float
+  originalPrice   Float?
+  
+  affiliateUrl    String
+  affiliateNetwork String  // "amazon", "shareasale", "rakuten", etc.
+  commissionRate  Float?
+  
+  imageUrl        String?
+  images          String[]
+  
+  // Categorization
+  slot            String   // "head", "top", "bottom", "feet", "accessory"
+  category        String?
+  styles          String[] // ["streetwear", "minimalist", "classic", etc.]
+  colors          String[]
+  
+  // Sizing
+  availableSizes  String[]
+  sizeGuideUrl    String?
+  
+  // Status
+  isActive        Boolean  @default(true)
+  isFeatured      Boolean  @default(false)
+  
+  // Tracking
+  clickCount      Int      @default(0)
+  purchaseCount   Int      @default(0)
+  totalCommission Float    @default(0)
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([slot])
+  @@index([brand])
+}
+
+// ============================================
+// FINANCIAL TRANSPARENCY
+// ============================================
+
+model FinancialQuarter {
+  id                     String   @id @default(cuid())
+  quarter                String   // "Q1", "Q2", "Q3", "Q4"
+  year                   Int
+  revenue                Float
+  
+  // Expense breakdown
+  materialsCost          Float
+  laborCost              Float    // Total salaries (base)
+  advertisingCost        Float
+  operationsCost         Float
+  employeeEventsCost     Float
+  otherCost              Float
+  
+  // Profit distribution
+  netProfit              Float
+  savedAmount            Float    // 25% of profit
+  distributedAmount      Float    // 75% of profit
+  employeeCount          Int
+  perEmployeeDistribution Float
+  
+  // Meta
+  reportPdfUrl           String?
+  isPublished            Boolean  @default(false)
+  publishedAt            DateTime?
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  @@unique([quarter, year])
+}
+
+model CompanyMetrics {
+  id                      String   @id @default(cuid())
+  baseSalary              Float    @default(70000)
+  profitSharePercent      Float    @default(75)
+  savingsPercent          Float    @default(25)
+  totalEmployees          Int
+  totalDistributedAllTime Float    @default(0)
+  
+  // Compensation cap
+  baseCompensationCap     Float    @default(400000)  // Starting cap (2024)
+  currentCompensationCap  Float    @default(400000)  // Adjusted for current year
+  
+  updatedAt               DateTime @updatedAt
+}
+
+// ============================================
+// COST OF LIVING INDEX
+// ============================================
+
+model CostOfLivingYear {
+  id                  String   @id @default(cuid())
+  year                Int      @unique
+  
+  // Individual metrics
+  housingIndex        Float    // Normalized to 100 for base year
+  milkPrice           Float    // Per gallon
+  eggsPrice           Float    // Per dozen
+  gasPrice            Float    // Per gallon
+  
+  // Calculated values
+  compositeIndex      Float    // Weighted combination
+  yearOverYearChange  Float?   // Percentage change from previous year
+  
+  // Impact on compensation
+  compensationCap     Float    // Adjusted cap for this year
+  
+  // Data sources / verification
+  housingSource       String?
+  grocerySource       String?
+  gasSource           String?
+  
+  verifiedAt          DateTime?
+  verifiedBy          String?
+  
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
+
+model CostOfLivingMetric {
+  id          String   @id @default(cuid())
+  year        Int
+  month       Int      // 1-12, for monthly tracking
+  
+  metric      String   // "housing", "milk", "eggs", "gas"
+  value       Float
+  source      String?
+  
+  createdAt   DateTime @default(now())
+
+  @@unique([year, month, metric])
+  @@index([year])
+}

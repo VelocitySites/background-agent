@@ -400,7 +400,6 @@ export default function MissionPage() {
               </div>
             </div>
           </motion.div>
-          </div>
         </div>
       </section>
 

@@ -7,8 +7,9 @@ import { ShoppingBag, Menu, X, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const NAV_LINKS = [
-  { href: "/shop", label: "Shop" },
+  { href: "/shop/experience", label: "Shop" },
   { href: "/mission", label: "The Revolution" },
+  { href: "/ecosystem", label: "The Ecosystem" },
   { href: "/about", label: "Our People" },
   { href: "/transparency", label: "Our Finances" },
 ];

@@ -225,16 +225,174 @@ model StorySection {
 }
 
 // ============================================
-// ANALYTICS & USER PREFERENCES
+// USER PROFILES & AVATARS
 // ============================================
+
+model UserProfile {
+  id                String    @id @default(cuid())
+  email             String    @unique
+  name              String?
+  
+  // Avatar configuration
+  avatarMode        String    @default("random") // "random", "customize", "photo"
+  avatarPhotoUrl    String?
+  avatarSkinTone    Int       @default(2)
+  avatarHairStyle   Int       @default(0)
+  avatarHairColor   Int       @default(0)
+  avatarBodyType    Int       @default(2)
+  
+  // Body measurements
+  height            String?
+  weight            String?
+  chestSize         String?
+  waistSize         String?
+  hipSize           String?
+  inseamLength      String?
+  shoeSize          String?
+  
+  // Size recommendations (calculated from measurements)
+  recommendedTopSize      String?
+  recommendedBottomSize   String?
+  recommendedOuterwearSize String?
+  recommendedShoeSize     String?
+  
+  // Preferences
+  preferredStyles   String[]
+  savedOutfits      SavedOutfit[]
+  
+  hasCompletedOnboarding Boolean @default(false)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+model SavedOutfit {
+  id          String      @id @default(cuid())
+  userId      String
+  user        UserProfile @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String?
+  items       Json        // Array of product IDs and variants
+  totalPrice  Float
+  createdAt   DateTime    @default(now())
+
+  @@index([userId])
+}
 
 model VisitorSession {
   id              String   @id @default(cuid())
   sessionId       String   @unique
   hasCompletedIntro Boolean @default(false)
   savedLookUrl    String?
+  avatarConfig    Json?    // Temporary avatar config before account creation
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+}
+
+// ============================================
+// ECOSYSTEM & COMPANIES
+// ============================================
+
+model EcosystemCompany {
+  id              String   @id @default(cuid())
+  slug            String   @unique
+  name            String
+  industry        String
+  description     String   @db.Text
+  logoUrl         String?
+  websiteUrl      String?
+  
+  // Join type
+  joinType        String   // "founding", "merged", "acquired", "launched"
+  joinDate        DateTime
+  
+  // Current metrics
+  employeeCount   Int
+  baseSalary      Float    @default(70000)
+  
+  // Status
+  isActive        Boolean  @default(true)
+  isPublic        Boolean  @default(true)
+  
+  // Financials are separate for merged companies
+  hasSeparateFinancials Boolean @default(false)
+  
+  teamMembers     TeamMember[]
+  financials      FinancialQuarter[]
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model EcosystemApplication {
+  id              String   @id @default(cuid())
+  
+  // Applicant info
+  contactName     String
+  contactEmail    String
+  companyName     String?
+  industry        String
+  
+  // Application type
+  applicationType String   // "merge", "acquisition", "launch", "suggest_industry"
+  
+  // Details
+  description     String   @db.Text
+  whyJoin         String   @db.Text
+  currentRevenue  String?
+  employeeCount   Int?
+  websiteUrl      String?
+  
+  // Status
+  status          String   @default("pending") // "pending", "reviewing", "accepted", "rejected"
+  reviewNotes     String?  @db.Text
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+// ============================================
+// AFFILIATE PRODUCTS
+// ============================================
+
+model AffiliateProduct {
+  id              String   @id @default(cuid())
+  externalId      String?  // ID from affiliate network
+  name            String
+  brand           String
+  description     String?  @db.Text
+  price           Float
+  originalPrice   Float?
+  
+  affiliateUrl    String
+  affiliateNetwork String  // "amazon", "shareasale", "rakuten", etc.
+  commissionRate  Float?
+  
+  imageUrl        String?
+  images          String[]
+  
+  // Categorization
+  slot            String   // "head", "top", "bottom", "feet", "accessory"
+  category        String?
+  styles          String[] // ["streetwear", "minimalist", "classic", etc.]
+  colors          String[]
+  
+  // Sizing
+  availableSizes  String[]
+  sizeGuideUrl    String?
+  
+  // Status
+  isActive        Boolean  @default(true)
+  isFeatured      Boolean  @default(false)
+  
+  // Tracking
+  clickCount      Int      @default(0)
+  purchaseCount   Int      @default(0)
+  totalCommission Float    @default(0)
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([slot])
+  @@index([brand])
 }
 
 // ============================================

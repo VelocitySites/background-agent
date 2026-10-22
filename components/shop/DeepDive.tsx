@@ -152,27 +152,35 @@ function ClothZoom({
   depth: number;
   layer: StoryLayer;
 }) {
-  const scale = 1 + depth * 0.22;
-  const weave = Math.max(6, 22 - depth * 4);
+  const scale = 1 + depth * 0.28;
+  const weave = Math.max(8, 26 - depth * 5);
 
   return (
-    <div className="relative mx-auto h-64 w-64 shrink-0 overflow-hidden rounded-[2rem] border border-white/10 sm:h-80 sm:w-80">
+    <div className="relative mx-auto h-72 w-72 shrink-0 overflow-hidden rounded-[2rem] border border-white/15 shadow-2xl sm:h-96 sm:w-80">
       <motion.div
-        className="absolute inset-[-20%]"
+        className="absolute inset-[-30%] flex items-center justify-center"
         animate={{ scale }}
         transition={{ type: "spring", stiffness: 160, damping: 22 }}
-        style={{
-          backgroundColor: item.color,
-          backgroundImage: `
-            repeating-linear-gradient(90deg, transparent, transparent ${weave - 1}px, rgba(0,0,0,0.18) ${weave}px),
-            repeating-linear-gradient(0deg, transparent, transparent ${weave - 1}px, rgba(255,255,255,0.16) ${weave}px)
-          `,
-        }}
-      />
-      <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-white/10" />
+      >
+        <div
+          className="h-full w-full"
+          style={{
+            backgroundColor: item.color,
+            backgroundImage: `
+              linear-gradient(115deg, rgba(255,255,255,0.22), transparent 42%),
+              repeating-linear-gradient(90deg, rgba(0,0,0,0.22) 0 2px, transparent 2px ${weave}px),
+              repeating-linear-gradient(0deg, rgba(255,255,255,0.2) 0 2px, transparent 2px ${weave}px)
+            `,
+          }}
+        />
+      </motion.div>
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-white/10" />
+      <div className="absolute left-4 top-4 rounded-full bg-black/45 px-3 py-1 text-[11px] uppercase tracking-[0.16em] text-white">
+        Close-up · {layer.label}
+      </div>
       <div className="absolute bottom-4 left-4 right-4">
-        <p className="text-[11px] uppercase tracking-[0.16em] text-white/70">{layer.label}</p>
-        <p className="font-display text-xl text-white">{layer.title}</p>
+        <p className="font-display text-2xl leading-tight text-white">{layer.title}</p>
+        <p className="mt-1 text-xs text-white/75">{item.brand}</p>
       </div>
     </div>
   );

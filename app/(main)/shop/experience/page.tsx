@@ -43,6 +43,7 @@ import {
 } from "@/lib/shop/catalog";
 import { loadAvatar, type AvatarConfig } from "@/lib/shop/avatar";
 import { addLook } from "@/lib/shop/looks";
+import { swapPiece } from "@/lib/shop/wardrobe";
 import type { ClothingSlot } from "@/types";
 
 const TUTORIAL_STORAGE_KEY = "revolution_tutorial_completed";
@@ -151,7 +152,7 @@ export default function ShopExperiencePage() {
   const selectItem = useCallback(
     (item: ClothingItem) => {
       remember();
-      setOutfit((prev) => ({ ...prev, [item.slot]: item }));
+      setOutfit((prev) => swapPiece(prev, item));
       setActiveSlot(item.slot);
       playSound("select");
     },
@@ -161,7 +162,7 @@ export default function ShopExperiencePage() {
   const clearSlot = useCallback(
     (slot: ClothingSlot) => {
       remember();
-      setOutfit((prev) => ({ ...prev, [slot]: null }));
+      setOutfit((prev) => swapPiece(prev, null, slot));
       playSound("remove");
     },
     [playSound, remember]

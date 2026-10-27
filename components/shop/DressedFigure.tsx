@@ -1,6 +1,6 @@
 "use client";
 
-import { useId } from "react";
+import { useId, useRef, useState } from "react";
 import type { ClothingSlot } from "@/types";
 import {
   type ClothingItem,
@@ -15,6 +15,7 @@ import {
 } from "@/lib/shop/avatar";
 import { adjustColor } from "@/lib/shop/color";
 import { cn } from "@/lib/utils";
+import { angleFromYaw, BackBody, SideBody } from "@/components/shop/FigureAngles";
 
 const BODY_SCALE = [0.84, 0.93, 1, 1.08, 1.16];
 
@@ -25,6 +26,8 @@ interface DressedFigureProps {
   onSlotClick?: (slot: ClothingSlot) => void;
   onPieceDoubleClick?: (slot: ClothingSlot) => void;
   deepDive?: boolean;
+  /** Drag and the side arrows spin the figure through a full turn. */
+  orbit?: boolean;
   framed?: boolean;
   className?: string;
 }
@@ -36,10 +39,16 @@ export function DressedFigure({
   onSlotClick,
   onPieceDoubleClick,
   deepDive = false,
+  orbit = false,
   framed = true,
   className,
 }: DressedFigureProps) {
   const rawId = useId().replace(/:/g, "");
+  const [yaw, setYaw] = useState(0);
+  const [grabbing, setGrabbing] = useState(false);
+  const drag = useRef<{ x: number; moved: boolean } | null>(null);
+  const suppressClick = useRef(false);
+  const facing = angleFromYaw(yaw);
   const person = avatar ?? DEFAULT_AVATAR;
   const skin = SKIN_TONES[person.skinTone] ?? SKIN_TONES[2];
   const hair = HAIR_COLORS[person.hairColor] ?? HAIR_COLORS[0];
@@ -51,14 +60,55 @@ export function DressedFigure({
   const head = outfit.head ?? null;
   const longSleeves = top?.kind === "hoodie" || top?.kind === "oxford";
 
+  const turn = (delta: number) => setYaw((current) => current + delta);
+
+  const onPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (!orbit) return;
+    if ((event.target as HTMLElement).closest("[data-orbit-button]")) return;
+    drag.current = { x: event.clientX, moved: false };
+    setGrabbing(true);
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+
+  const onPointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (!drag.current) return;
+    const dx = event.clientX - drag.current.x;
+    if (Math.abs(dx) > 2) drag.current.moved = true;
+    if (!drag.current.moved) return;
+    drag.current.x = event.clientX;
+    turn(dx * 0.7);
+  };
+
+  const onPointerUp = () => {
+    if (drag.current?.moved) {
+      suppressClick.current = true;
+      window.setTimeout(() => {
+        suppressClick.current = false;
+      }, 280);
+    }
+    drag.current = null;
+    setGrabbing(false);
+  };
+
+  const guarded = (slot: ClothingSlot) => {
+    if (suppressClick.current) return;
+    onSlotClick?.(slot);
+  };
+
   return (
     <div
       className={cn(
         "relative",
         framed &&
           "overflow-hidden rounded-3xl border border-brand-700/50 bg-gradient-to-b from-brand-800/95 to-brand-950 shadow-2xl",
+        orbit && (grabbing ? "cursor-grabbing" : "cursor-grab"),
         className
       )}
+      style={orbit ? { touchAction: "none" } : undefined}
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={onPointerUp}
+      onPointerCancel={onPointerUp}
     >
       {framed && (
         <>
@@ -83,6 +133,22 @@ export function DressedFigure({
           </clipPath>
         </defs>
 
+        <g transform={`translate(100 0) scale(${facing.squeeze} 1) translate(-100 0)`}>
+        {facing.angle === "back" && (
+          <BackBody
+            skin={skin}
+            skinId={`${rawId}-skin`}
+            hair={hair}
+            hairStyle={person.hairStyle}
+            top={top}
+            bottom={bottom}
+            feet={feet}
+            head={head}
+            bodyScale={scale}
+          />
+        )}
+        {facing.angle === "front" && (
+          <>
         <ellipse cx="100" cy="408" rx="46" ry="8" fill="rgba(0,0,0,0.28)" />
 
         <g transform={`translate(100 230) scale(${scale} 1) translate(-100 -230)`}>
@@ -112,6 +178,24 @@ export function DressedFigure({
         )}
         <HairFront style={person.hairStyle} color={hair} overPhoto={Boolean(person.photoUrl)} />
         <Headwear item={head} />
+          </>
+        )}
+        {(facing.angle === "left" || facing.angle === "right") && (
+          <g transform={facing.angle === "left" ? "translate(200 0) scale(-1 1)" : undefined}>
+            <SideBody
+              skin={skin}
+              skinId={`${rawId}-skin`}
+              hair={hair}
+              hairStyle={person.hairStyle}
+              top={top}
+              bottom={bottom}
+              feet={feet}
+              head={head}
+              bodyScale={scale}
+            />
+          </g>
+        )}
+        </g>
       </svg>
 
       {onSlotClick && (
@@ -120,37 +204,107 @@ export function DressedFigure({
             label="Select headwear"
             active={activeSlot === "head"}
             hint={deepDive && head ? "Double-click" : undefined}
-            onClick={() => onSlotClick("head")}
-            onDoubleClick={onPieceDoubleClick ? () => onPieceDoubleClick("head") : undefined}
+            onClick={() => guarded("head")}
+            onDoubleClick={
+              onPieceDoubleClick
+                ? () => {
+                    if (suppressClick.current) return;
+                    onPieceDoubleClick("head");
+                  }
+                : undefined
+            }
             className="left-1/2 top-[4%] h-[18%] w-[34%] -translate-x-1/2 rounded-full"
           />
           <Zone
             label="Select top"
             active={activeSlot === "top"}
             hint={deepDive && top ? "Double-click" : undefined}
-            onClick={() => onSlotClick("top")}
-            onDoubleClick={onPieceDoubleClick ? () => onPieceDoubleClick("top") : undefined}
+            onClick={() => guarded("top")}
+            onDoubleClick={
+              onPieceDoubleClick
+                ? () => {
+                    if (suppressClick.current) return;
+                    onPieceDoubleClick("top");
+                  }
+                : undefined
+            }
             className="left-1/2 top-[24%] h-[26%] w-[46%] -translate-x-1/2 rounded-2xl"
           />
           <Zone
             label="Select bottom"
             active={activeSlot === "bottom"}
             hint={deepDive && bottom ? "Double-click" : undefined}
-            onClick={() => onSlotClick("bottom")}
-            onDoubleClick={onPieceDoubleClick ? () => onPieceDoubleClick("bottom") : undefined}
+            onClick={() => guarded("bottom")}
+            onDoubleClick={
+              onPieceDoubleClick
+                ? () => {
+                    if (suppressClick.current) return;
+                    onPieceDoubleClick("bottom");
+                  }
+                : undefined
+            }
             className="left-1/2 top-[50%] h-[28%] w-[40%] -translate-x-1/2 rounded-2xl"
           />
           <Zone
             label="Select footwear"
             active={activeSlot === "feet"}
             hint={deepDive && feet ? "Double-click" : undefined}
-            onClick={() => onSlotClick("feet")}
-            onDoubleClick={onPieceDoubleClick ? () => onPieceDoubleClick("feet") : undefined}
+            onClick={() => guarded("feet")}
+            onDoubleClick={
+              onPieceDoubleClick
+                ? () => {
+                    if (suppressClick.current) return;
+                    onPieceDoubleClick("feet");
+                  }
+                : undefined
+            }
             className="left-1/2 top-[80%] h-[14%] w-[52%] -translate-x-1/2 rounded-xl"
           />
         </div>
       )}
+
+      {orbit && (
+        <>
+          <button
+            type="button"
+            data-orbit-button
+            aria-label="Turn left"
+            onClick={() => turn(-50)}
+            className="absolute left-3 top-1/2 z-20 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-white/15 bg-brand-950/80 text-white hover:bg-brand-800"
+          >
+            <Chevron direction="left" />
+          </button>
+          <button
+            type="button"
+            data-orbit-button
+            aria-label="Turn right"
+            onClick={() => turn(50)}
+            className="absolute right-3 top-1/2 z-20 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-white/15 bg-brand-950/80 text-white hover:bg-brand-800"
+          >
+            <Chevron direction="right" />
+          </button>
+          <div className="pointer-events-none absolute bottom-3 left-1/2 z-20 -translate-x-1/2 text-center">
+            <p className="text-[10px] uppercase tracking-[0.18em] text-white/80">{facing.label}</p>
+            <p className="text-[10px] text-white/45">Drag to turn</p>
+          </div>
+        </>
+      )}
     </div>
+  );
+}
+
+function Chevron({ direction }: { direction: "left" | "right" }) {
+  return (
+    <svg viewBox="0 0 20 20" className="h-4 w-4" aria-hidden>
+      <path
+        d={direction === "left" ? "M12 4 L6 10 L12 16" : "M8 4 L14 10 L8 16"}
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
   );
 }
 

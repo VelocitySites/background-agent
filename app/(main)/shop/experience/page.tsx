@@ -41,12 +41,7 @@ import {
   type ClothingItem,
   type SelectedOutfit,
 } from "@/lib/shop/catalog";
-import {
-  BODY_TYPES,
-  HAIR_STYLES,
-  loadAvatar,
-  type AvatarConfig,
-} from "@/lib/shop/avatar";
+import { loadAvatar, type AvatarConfig } from "@/lib/shop/avatar";
 import { addLook } from "@/lib/shop/looks";
 import type { ClothingSlot } from "@/types";
 
@@ -423,6 +418,7 @@ export default function ShopExperiencePage() {
                   avatar={avatar}
                   activeSlot={activeSlot}
                   deepDive={deepDive}
+                  orbit
                   onSlotClick={handleSlotClick}
                   onPieceDoubleClick={handlePieceDoubleClick}
                   className="absolute left-1/2 top-0 h-[440px] w-72 -translate-x-1/2 sm:h-[540px] sm:w-80"
@@ -451,11 +447,10 @@ export default function ShopExperiencePage() {
 
               </div>
                 <p className="mx-auto mt-3 max-w-sm text-center text-xs text-brand-400">
+                  Drag the figure, or use the arrows, to turn them all the way around.
                   {avatar?.photoUrl
-                    ? "Your photo is the face. Clothes are drawn on the figure — this is not a generated try-on."
-                    : avatar
-                      ? `${BODY_TYPES[avatar.bodyType]} build · ${HAIR_STYLES[avatar.hairStyle].toLowerCase()} hair. Hover the figure to swap pieces.`
-                      : "Hover the figure. The piece menus fade until you come back."}
+                    ? " Your photo is the face from the front. Clothes are drawn on, not generated."
+                    : " The back and sides show the same pieces."}
                 </p>
               </div>
             </div>

@@ -85,7 +85,7 @@ export default function ShopExperiencePage() {
   const { opacity: menuOpacity, handlers: menuHandlers } = useFadeOnIdle({
     timeout: 2800,
     initiallyVisible: true,
-    minOpacity: 0,
+    minOpacity: 1,
   });
 
   useEffect(() => {
@@ -160,10 +160,10 @@ export default function ShopExperiencePage() {
   }, []);
 
   const selectItem = useCallback(
-    (item: ClothingItem) => {
+    (item: ClothingItem, openMenu = true) => {
       remember();
       setOutfit((prev) => swapPiece(prev, item));
-      setActiveSlot(item.slot);
+      if (openMenu) setActiveSlot(item.slot);
       playSound("select");
     },
     [playSound, remember]
@@ -413,11 +413,6 @@ export default function ShopExperiencePage() {
           <div className="flex flex-col items-start gap-8 lg:flex-row">
             <div className="hidden w-56 shrink-0 flex-col gap-4 xl:flex">
               <OutfitPresets inventory={inventory} onApplyPreset={(next) => applyOutfit(next as SelectedOutfit)} />
-              <CompleteTheLook
-                currentOutfit={outfit}
-                inventory={inventory}
-                onAddItem={selectItem}
-              />
             </div>
 
             <div className="flex flex-1 justify-center">
@@ -429,7 +424,7 @@ export default function ShopExperiencePage() {
                   onApplyPreset={(next) => applyOutfit(next as SelectedOutfit)}
                 />
               </div>
-              <div className="relative h-[440px] w-full sm:h-[540px]" {...menuHandlers}>
+              <div className="relative h-[340px] w-full sm:h-[440px]" {...menuHandlers}>
                 <DressedFigure
                   outfit={outfit}
                   avatar={avatar}
@@ -438,10 +433,10 @@ export default function ShopExperiencePage() {
                   orbit
                   onSlotClick={handleSlotClick}
                   onPieceDoubleClick={handlePieceDoubleClick}
-                  className="absolute left-1/2 top-0 h-[440px] w-72 -translate-x-1/2 sm:h-[540px] sm:w-80"
+                  className="absolute left-1/2 top-0 h-[340px] w-72 -translate-x-1/2 sm:h-[440px] sm:w-80"
                 />
 
-                <div className="pointer-events-none absolute inset-0 hidden lg:block">
+                <div className="pointer-events-none absolute inset-0 hidden 2xl:block">
                   {DRESS_SLOTS.map((slot) => (
                     <div key={slot} className="pointer-events-auto">
                       <GarmentRail
@@ -466,12 +461,18 @@ export default function ShopExperiencePage() {
                 <p className="mx-auto mt-3 max-w-md text-center text-xs text-brand-300">
                   {describeLook(items)}
                 </p>
-                <p className="mx-auto mt-1 max-w-sm text-center text-xs text-brand-400">
-                  Drag the figure, or use the arrows, to turn them all the way around.
-                  {avatar?.photoUrl
-                    ? " Your photo is the face from the front. Clothes are drawn on, not generated."
-                    : " The back and sides show the same pieces."}
+                <p className="mx-auto mt-1 max-w-md text-center text-xs text-brand-400">
+                  Drag the figure, or the arrows, to turn them around. Clothes are drawn on.
+                  {avatar?.photoUrl ? " Your photo is the face from the front." : ""}
                 </p>
+                <div className="sm:hidden">
+                  <CompleteTheLook
+                    layout="line"
+                    currentOutfit={outfit}
+                    inventory={inventory}
+                    onAddItem={(item) => selectItem(item, false)}
+                  />
+                </div>
               </div>
             </div>
 
@@ -505,7 +506,7 @@ export default function ShopExperiencePage() {
             </div>
           </div>
 
-          <div className="mt-8 lg:hidden">
+          <div className="mt-4 2xl:hidden">
             <div className="flex gap-2 overflow-x-auto pb-3">
               {DRESS_SLOTS.map((slot) => (
                 <button
@@ -571,6 +572,14 @@ export default function ShopExperiencePage() {
                 </motion.div>
               )}
             </AnimatePresence>
+          </div>
+
+          <div className="hidden sm:block">
+            <CompleteTheLook
+              currentOutfit={outfit}
+              inventory={inventory}
+              onAddItem={(item) => selectItem(item, false)}
+            />
           </div>
         </div>
       </div>

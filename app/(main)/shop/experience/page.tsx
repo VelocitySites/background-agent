@@ -32,8 +32,6 @@ import {
   STYLE_TO_LOOK,
   defaultOutfit,
   emptyOutfit,
-  itemById,
-  itemsForSlot,
   outfitFromPreset,
   outfitItemIds,
   outfitTotal,
@@ -43,6 +41,9 @@ import {
 } from "@/lib/shop/catalog";
 import { loadAvatar, type AvatarConfig } from "@/lib/shop/avatar";
 import { addLook } from "@/lib/shop/looks";
+import { findShopItem, loadPartnerItems, mergeShopInventory, PARTNER_EVENT } from "@/lib/shop/partner-catalog";
+import { describeLook } from "@/lib/shop/suggest";
+import { affiliateOf } from "@/lib/shop/intake";
 import { swapPiece } from "@/lib/shop/wardrobe";
 import type { ClothingSlot } from "@/types";
 
@@ -72,11 +73,14 @@ export default function ShopExperiencePage() {
   const [deepDive, setDeepDive] = useState(false);
   const [menuItem, setMenuItem] = useState<ClothingItem | null>(null);
   const [diveItem, setDiveItem] = useState<ClothingItem | null>(null);
+  const [inventory, setInventory] = useState<ClothingItem[]>(INVENTORY);
   const outfitRef = useRef(outfit);
   const historyRef = useRef(outfitHistory);
+  const inventoryRef = useRef(inventory);
   const clickTimer = useRef<number | null>(null);
   outfitRef.current = outfit;
   historyRef.current = outfitHistory;
+  inventoryRef.current = inventory;
 
   const { opacity: menuOpacity, handlers: menuHandlers } = useFadeOnIdle({
     timeout: 2800,
@@ -94,6 +98,9 @@ export default function ShopExperiencePage() {
     setDeepDive(localStorage.getItem(DEEP_DIVE_KEY) === "true");
     setAvatar(loadAvatar());
 
+    const catalog = mergeShopInventory(loadPartnerItems());
+    setInventory(catalog);
+
     const params = new URLSearchParams(window.location.search);
     const look = params.get("look");
     const style = params.get("style");
@@ -103,7 +110,7 @@ export default function ShopExperiencePage() {
     const presetId = look || STYLE_TO_LOOK[styleKey];
 
     if (presetId === "random") {
-      setOutfit(randomOutfit());
+      setOutfit(randomOutfit(catalog));
     } else if (presetId) {
       const next = outfitFromPreset(presetId) ?? outfitFromItemList(presetId);
       if (next) setOutfit(next);
@@ -114,10 +121,13 @@ export default function ShopExperiencePage() {
     }
 
     const onAvatar = () => setAvatar(loadAvatar());
+    const onPartners = () => setInventory(mergeShopInventory(loadPartnerItems()));
     window.addEventListener("revolution-avatar-changed", onAvatar);
+    window.addEventListener(PARTNER_EVENT, onPartners);
     return () => {
       clearTimeout(timer);
       window.removeEventListener("revolution-avatar-changed", onAvatar);
+      window.removeEventListener(PARTNER_EVENT, onPartners);
     };
   }, []);
 
@@ -198,7 +208,7 @@ export default function ShopExperiencePage() {
         setMenuItem(null);
         setDiveItem(null);
       } else if (event.key === "r" || event.key === "R") {
-        applyOutfit(randomOutfit());
+        applyOutfit(randomOutfit(inventoryRef.current));
       } else if (event.key === "u" || event.key === "U") {
         undoOutfit();
       } else if (event.key === "?" || (event.key === "/" && event.shiftKey)) {
@@ -308,6 +318,12 @@ export default function ShopExperiencePage() {
           </Link>
 
           <div className="flex items-center gap-2 sm:gap-4">
+            <Link
+              href="/shop/partners"
+              className="text-sm text-brand-400 transition-colors hover:text-white"
+            >
+              Add a partner piece
+            </Link>
             <button
               type="button"
               onClick={undoOutfit}
@@ -320,7 +336,7 @@ export default function ShopExperiencePage() {
             </button>
             <button
               type="button"
-              onClick={() => applyOutfit(randomOutfit())}
+              onClick={() => applyOutfit(randomOutfit(inventoryRef.current))}
               className="group flex items-center gap-1.5 text-sm text-brand-400 transition-colors hover:text-white"
               title="Randomize (R)"
             >
@@ -396,10 +412,10 @@ export default function ShopExperiencePage() {
         <div className="container-wide section-padding">
           <div className="flex flex-col items-start gap-8 lg:flex-row">
             <div className="hidden w-56 shrink-0 flex-col gap-4 xl:flex">
-              <OutfitPresets inventory={INVENTORY} onApplyPreset={(next) => applyOutfit(next as SelectedOutfit)} />
+              <OutfitPresets inventory={inventory} onApplyPreset={(next) => applyOutfit(next as SelectedOutfit)} />
               <CompleteTheLook
                 currentOutfit={outfit}
-                inventory={INVENTORY}
+                inventory={inventory}
                 onAddItem={selectItem}
               />
             </div>
@@ -408,7 +424,7 @@ export default function ShopExperiencePage() {
               <div className="w-full max-w-3xl">
               <div className="mb-4 xl:hidden">
                 <OutfitPresets
-                  inventory={INVENTORY}
+                  inventory={inventory}
                   defaultExpanded={false}
                   onApplyPreset={(next) => applyOutfit(next as SelectedOutfit)}
                 />
@@ -430,7 +446,7 @@ export default function ShopExperiencePage() {
                     <div key={slot} className="pointer-events-auto">
                       <GarmentRail
                         label={SLOT_LABELS[slot]}
-                        items={itemsForSlot(slot)}
+                        items={inventory.filter((item) => item.slot === slot)}
                         selected={outfit[slot]}
                         isActive={activeSlot === slot}
                         opacity={Math.max(menuOpacity, activeSlot === slot ? 1 : 0)}
@@ -447,7 +463,10 @@ export default function ShopExperiencePage() {
                 </div>
 
               </div>
-                <p className="mx-auto mt-3 max-w-sm text-center text-xs text-brand-400">
+                <p className="mx-auto mt-3 max-w-md text-center text-xs text-brand-300">
+                  {describeLook(items)}
+                </p>
+                <p className="mx-auto mt-1 max-w-sm text-center text-xs text-brand-400">
                   Drag the figure, or use the arrows, to turn them all the way around.
                   {avatar?.photoUrl
                     ? " Your photo is the face from the front. Clothes are drawn on, not generated."
@@ -523,7 +542,9 @@ export default function ShopExperiencePage() {
                   className="overflow-hidden"
                 >
                   <div className="flex gap-3 overflow-x-auto py-3">
-                    {itemsForSlot(activeSlot).map((item) => (
+                    {inventory
+                      .filter((item) => item.slot === activeSlot)
+                      .map((item) => (
                       <button
                         key={item.id}
                         type="button"
@@ -623,8 +644,8 @@ export default function ShopExperiencePage() {
                 </button>
               </div>
               <p className="mb-6 text-sm text-brand-300">
-                Saved in your looks. Each piece opens on the maker&apos;s site. These are not
-                tracked affiliate links yet — when that exists, the purchase can support the company.
+                Saved in your looks. Each piece opens on the maker&apos;s site. A purchase is tracked
+                only when that piece has an affiliate link from a network. The original shop pieces do not.
               </p>
               <div className="mb-6 max-h-[22rem] space-y-3 overflow-y-auto">
                 {items.map((item) => (
@@ -642,7 +663,10 @@ export default function ShopExperiencePage() {
                       />
                       <span>
                         <span className="block font-medium text-white">{item.name}</span>
-                        <span className="block text-sm text-brand-400">{item.brand}</span>
+                        <span className="block text-sm text-brand-400">
+                          {item.brand}
+                          {affiliateOf(item).status === "tracked" ? " · affiliate link" : " · opens the maker"}
+                        </span>
                       </span>
                     </div>
                     <span className="flex items-center gap-2 text-accent-300">
@@ -676,7 +700,7 @@ function outfitFromItemList(value: string): SelectedOutfit | null {
   const next = emptyOutfit();
   let found = false;
   value.split(",").forEach((id) => {
-    const item = itemById(id.trim());
+    const item = findShopItem(id.trim());
     if (!item) return;
     next[item.slot] = item;
     found = true;

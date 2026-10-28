@@ -4,30 +4,6 @@ import { fold } from "@/lib/shop/graphics";
 
 export type FigureAngle = "front" | "right" | "back" | "left";
 
-export function angleFromYaw(yaw: number): {
-  angle: FigureAngle;
-  label: string;
-  /** Narrow the front or back as the turn approaches a side. */
-  squeeze: number;
-} {
-  const a = ((yaw % 360) + 360) % 360;
-  const dist = (center: number) => {
-    const d = Math.abs(a - center);
-    return Math.min(d, 360 - d);
-  };
-
-  if (dist(0) <= 45) {
-    return { angle: "front", label: "Front", squeeze: 1 - (dist(0) / 45) * 0.22 };
-  }
-  if (dist(180) <= 45) {
-    return { angle: "back", label: "Back", squeeze: 1 - (dist(180) / 45) * 0.22 };
-  }
-  if (a >= 45 && a < 180) {
-    return { angle: "right", label: "Right side", squeeze: 1 };
-  }
-  return { angle: "left", label: "Left side", squeeze: 1 };
-}
-
 interface AngleBodyProps {
   skin: string;
   skinId: string;
@@ -170,7 +146,7 @@ export function SideBody({
           <path d="M118 250 H140 V264 H118 Z" fill="none" stroke={bottom.accent} strokeWidth="1.2" />
         )}
         {bottom?.kind === "joggers" && <ellipse cx="132" cy="362" rx="14" ry="5" fill={legsDark} />}
-        {feet && <SideShoe color={shoe} sole={sole} kind={feet.kind} />}
+        {feet && <SideShoe color={shoe} sole={sole} accent={feet.accent} kind={feet.kind} />}
         <path
           d="M92 150 C86 130 96 112 112 108 L124 112 C136 120 142 140 140 168 L136 228 L100 228 L96 176 Z"
           fill={cloth}
@@ -201,20 +177,32 @@ export function SideBody({
 function SideShoe({
   color,
   sole,
+  accent,
   kind,
 }: {
   color: string;
   sole: string;
+  accent: string;
   kind: ClothingItem["kind"];
 }) {
   const tall = kind === "canvas";
-  const top = tall ? 336 : 358;
+  const top = tall ? 332 : 356;
   return (
     <g>
-      <path d={`M108 ${top + 16} H150 C162 ${top + 16} 164 ${top + 28} 150 ${top + 34} H104 C96 ${top + 30} 98 ${top + 20} 108 ${top + 16} Z`} fill={color} />
-      {tall && <path d="M118 336 H140 V356 H118 Z" fill={color} />}
-      <path d={`M100 ${top + 32} H162`} stroke={sole} strokeWidth="5" strokeLinecap="round" />
-      {kind === "runner" && <path d={`M112 ${top + 22} H148`} stroke="#1d4e89" strokeWidth="3" strokeLinecap="round" />}
+      <path
+        d={`M108 ${top + 18} H148 C160 ${top + 18} 164 ${top + 30} 150 ${top + 38} H104 C94 ${top + 34} 96 ${top + 22} 108 ${top + 18} Z`}
+        fill={color}
+      />
+      {tall && <path d="M116 332 H142 V352 H116 Z" fill={color} />}
+      {tall && <path d="M122 348 H146 L150 362 H118 Z" fill={accent} />}
+      <path
+        d={`M100 ${top + 36} H164`}
+        stroke={tall ? accent : sole}
+        strokeWidth="5"
+        strokeLinecap="round"
+      />
+      {tall && <path d="M122 336 H136 M122 344 H136" stroke={accent} strokeWidth="1.3" strokeLinecap="round" />}
+      {kind === "runner" && <path d={`M114 ${top + 24} H146`} stroke={accent || "#1d4e89"} strokeWidth="3" strokeLinecap="round" />}
     </g>
   );
 }

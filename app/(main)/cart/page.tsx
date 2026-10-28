@@ -4,16 +4,26 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ExternalLink, ShoppingBag, Trash2 } from "lucide-react";
 import { itemById, type ClothingItem } from "@/lib/shop/catalog";
+import { affiliateOf } from "@/lib/shop/intake";
+import { loadPartnerItems, PARTNER_EVENT } from "@/lib/shop/partner-catalog";
 import { LOOKS_EVENT, loadLooks, removeLook, type SavedLook } from "@/lib/shop/looks";
 
 export default function CartPage() {
   const [looks, setLooks] = useState<SavedLook[]>([]);
+  const [partners, setPartners] = useState<ClothingItem[]>([]);
 
   useEffect(() => {
-    const sync = () => setLooks(loadLooks());
+    const sync = () => {
+      setLooks(loadLooks());
+      setPartners(loadPartnerItems());
+    };
     sync();
     window.addEventListener(LOOKS_EVENT, sync);
-    return () => window.removeEventListener(LOOKS_EVENT, sync);
+    window.addEventListener(PARTNER_EVENT, sync);
+    return () => {
+      window.removeEventListener(LOOKS_EVENT, sync);
+      window.removeEventListener(PARTNER_EVENT, sync);
+    };
   }, []);
 
   return (
@@ -22,8 +32,8 @@ export default function CartPage() {
         <p className="text-sm uppercase tracking-[0.18em] text-accent-600">Saved on this device</p>
         <h1 className="mt-2 font-display text-4xl text-brand-950 md:text-5xl">Your looks</h1>
         <p className="mt-4 max-w-2xl text-brand-700">
-          A look is the outfit on the figure. Pieces still come from other companies — open each
-          one on the maker&apos;s site. Nothing here is a tracked affiliate link yet.
+          A look is the outfit on the figure. A purchase supports the company only when that
+          piece has a tracked affiliate link. The original shop pieces do not, yet.
         </p>
 
         {looks.length === 0 ? (
@@ -42,7 +52,7 @@ export default function CartPage() {
           <div className="mt-10 space-y-6">
             {looks.map((look) => {
               const items = look.itemIds
-                .map((id) => itemById(id))
+                .map((id) => itemById(id) ?? partners.find((item) => item.id === id) ?? null)
                 .filter((item): item is ClothingItem => item !== null);
               const total = items.reduce((sum, item) => sum + item.price, 0);
               return (
@@ -84,7 +94,10 @@ export default function CartPage() {
                           />
                           <span>
                             <span className="block text-brand-900">{item.name}</span>
-                            <span className="block text-sm text-brand-500">{item.brand}</span>
+                            <span className="block text-sm text-brand-500">
+                            {item.brand}
+                            {affiliateOf(item).status === "tracked" ? " · affiliate link" : ""}
+                          </span>
                           </span>
                         </div>
                         <a

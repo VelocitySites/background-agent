@@ -1,5 +1,6 @@
 import type { ClothingItem } from "@/lib/shop/catalog";
 import { adjustColor } from "@/lib/shop/color";
+import { fold } from "@/lib/shop/graphics";
 
 export type FigureAngle = "front" | "right" | "back" | "left";
 
@@ -51,11 +52,11 @@ export function BackBody({
   bodyScale,
 }: AngleBodyProps) {
   const cloth = top?.color ?? `url(#${skinId})`;
-  const clothDark = top ? adjustColor(top.color, -28) : skin;
+  const clothDark = fold(top, skin);
   const legs = bottom?.color ?? `url(#${skinId})`;
-  const legsDark = bottom ? adjustColor(bottom.color, -24) : skin;
+  const legsDark = fold(bottom, skin);
   const shoe = feet?.color ?? skin;
-  const shoeDark = feet ? adjustColor(feet.color, -30) : "#111";
+  const shoeDark = fold(feet, "#111");
 
   return (
     <g>
@@ -120,7 +121,7 @@ export function BackBody({
 
 function BackHeadwear({ item, hair }: { item: ClothingItem | null; hair: string }) {
   if (!item) return null;
-  const dark = adjustColor(item.color, -26);
+  const dark = fold(item);
   if (item.kind === "beanie") {
     return <path d="M68 46 C66 16 82 4 100 4 C118 4 134 16 132 46 C124 34 112 30 100 30 C88 30 76 34 68 46 Z" fill={item.color} />;
   }
@@ -153,11 +154,11 @@ export function SideBody({
   bodyScale,
 }: AngleBodyProps) {
   const cloth = top?.color ?? `url(#${skinId})`;
-  const clothDark = top ? adjustColor(top.color, -30) : skin;
+  const clothDark = fold(top, skin);
   const legs = bottom?.color ?? `url(#${skinId})`;
-  const legsDark = bottom ? adjustColor(bottom.color, -22) : skin;
+  const legsDark = fold(bottom, skin);
   const shoe = feet?.color ?? skin;
-  const sole = feet ? adjustColor(feet.color, -36) : "#111";
+  const sole = fold(feet, "#111");
 
   return (
     <g>
@@ -220,7 +221,7 @@ function SideShoe({
 
 function SideHeadwear({ item }: { item: ClothingItem | null }) {
   if (!item) return null;
-  const dark = adjustColor(item.color, -28);
+  const dark = fold(item);
   if (item.kind === "beanie") {
     return <path d="M96 40 C96 16 120 8 134 22 C140 36 132 48 118 46 C106 44 96 36 96 40 Z" fill={item.color} />;
   }

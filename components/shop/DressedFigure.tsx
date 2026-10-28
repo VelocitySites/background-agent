@@ -17,11 +17,12 @@ import { adjustColor } from "@/lib/shop/color";
 import { cn } from "@/lib/utils";
 import { angleFromYaw, BackBody, SideBody } from "@/components/shop/FigureAngles";
 import { registerShopModels } from "@/lib/shop/garment-manifest";
+import { fold, pictureFor, recipeFor } from "@/lib/shop/graphics";
 import {
   equipOutfit,
-  imageFor,
   standInItem,
   type FigureAngle,
+  type WornPiece,
   type WornRig,
 } from "@/lib/shop/wardrobe";
 
@@ -71,10 +72,11 @@ export function DressedFigure({
   const worn = equipOutfit(outfit, person);
   const showHair = !worn.covered.includes("hair");
   const armsCovered = worn.covered.includes("arms");
-  const top = standInItem(worn.bySlot.top, facing.angle);
-  const bottom = standInItem(worn.bySlot.bottom, facing.angle);
-  const feet = standInItem(worn.bySlot.feet, facing.angle);
-  const head = standInItem(worn.bySlot.head, facing.angle);
+  const top = drawnPiece(worn.bySlot.top, facing.angle);
+  const bottom = drawnPiece(worn.bySlot.bottom, facing.angle);
+  const feet = drawnPiece(worn.bySlot.feet, facing.angle);
+  const head = drawnPiece(worn.bySlot.head, facing.angle);
+  const clothShadow = top ? recipeFor(top).shadow : -32;
 
   const turn = (delta: number) => setYaw((current) => current + delta);
 
@@ -173,12 +175,12 @@ export function DressedFigure({
           <Legs item={bottom} skinId={`${rawId}-skin`} />
           <Shoes item={feet} />
           {!armsCovered && <Arms skinId={`${rawId}-skin`} />}
-          <Torso item={top} skin={skin} skinId={`${rawId}-skin`} />
+          <Torso item={top} skin={skin} skinId={`${rawId}-skin`} shadow={clothShadow} />
           <Hands skin={skin} covered={armsCovered} />
         </g>
 
         {showHair && <HairBack style={person.hairStyle} color={hair} />}
-        {top?.kind === "hoodie" && <Hood color={top.color} dark={adjustColor(top.color, -30)} />}
+        {top?.kind === "hoodie" && <Hood color={top.color} dark={adjustColor(top.color, clothShadow)} />}
         <ellipse cx="100" cy="58" rx="30" ry="36" fill={`url(#${rawId}-skin)`} />
         <rect x="88" y="88" width="24" height="22" rx="6" fill={skin} />
         {person.photoUrl ? (
@@ -312,6 +314,11 @@ export function DressedFigure({
   );
 }
 
+function drawnPiece(piece: WornPiece | undefined, angle: FigureAngle) {
+  if (pictureFor(piece, angle)) return null;
+  return standInItem(piece, angle);
+}
+
 const SLOT_FRAMES: Record<"head" | "top" | "bottom" | "feet", { x: number; y: number; w: number; h: number }> = {
   head: { x: 58, y: 2, w: 84, h: 96 },
   top: { x: 28, y: 100, w: 144, h: 140 },
@@ -323,7 +330,7 @@ function AttachedModels({ worn, angle }: { worn: WornRig; angle: FigureAngle }) 
   return (
     <g>
       {(["head", "top", "bottom", "feet"] as const).map((slot) => {
-        const href = imageFor(worn.bySlot[slot], angle);
+        const href = pictureFor(worn.bySlot[slot], angle);
         if (!href) return null;
         const frame = SLOT_FRAMES[slot];
         return (
@@ -530,10 +537,12 @@ function Torso({
   item,
   skin,
   skinId,
+  shadow,
 }: {
   item: ClothingItem | null;
   skin: string;
   skinId: string;
+  shadow: number;
 }) {
   if (!item) {
     return (
@@ -545,7 +554,7 @@ function Torso({
   }
 
   const main = item.color;
-  const dark = adjustColor(main, -32);
+  const dark = adjustColor(main, shadow);
   const light = adjustColor(main, 22);
 
   if (item.kind === "hoodie") {
@@ -608,7 +617,7 @@ function Torso({
 
 function Legs({ item, skinId }: { item: ClothingItem | null; skinId: string }) {
   const fill = item ? item.color : `url(#${skinId})`;
-  const dark = item ? adjustColor(item.color, -28) : "transparent";
+  const dark = fold(item);
   const hem = item?.kind === "joggers" ? 356 : 340;
 
   return (
@@ -666,7 +675,7 @@ function Legs({ item, skinId }: { item: ClothingItem | null; skinId: string }) {
 function Shoes({ item }: { item: ClothingItem | null }) {
   if (!item) return null;
   const main = item.color;
-  const dark = adjustColor(main, -35);
+  const dark = fold(item);
   const sole = item.kind === "leather" ? "#dedcd6" : "#111827";
 
   if (item.kind === "canvas") {

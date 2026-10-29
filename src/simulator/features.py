@@ -33,9 +33,10 @@ from simulator.data.teams import HIGH_ALTITUDE_FT, haversine_miles, team_meta
 FEATURES = [
     # player form
     "MIN_AVG_5", "MIN_AVG_10", "MIN_SEASON", "MIN_TREND",
-    "PPM_5", "PPM_10", "PPM_SEASON",
-    "RPM_5", "RPM_10", "RPM_SEASON",
-    "APM_5", "APM_10", "APM_SEASON",
+    "MIN_LAST", "MIN_STD_10", "MIN_EWM", "MIN_RANK_TEAM",
+    "PPM_5", "PPM_10", "PPM_SEASON", "PPM_SHRUNK",
+    "RPM_5", "RPM_10", "RPM_SEASON", "RPM_SHRUNK",
+    "APM_5", "APM_10", "APM_SEASON", "APM_SHRUNK",
     "PF_PER_MIN_10", "GAMES_PLAYED", "GAMES_SINCE_RETURN", "PLAYER_REST_DAYS",
     # schedule / travel
     "IS_HOME", "TEAM_REST_DAYS", "IS_B2B", "GAMES_LAST_6D",
@@ -81,7 +82,15 @@ def build_features(
     team_frame = _team_context(bundle, slate)
     player_frame = _player_rows(bundle, slate, overrides)
 
+    # Sequential team game index, used to count team games a player missed.
+    team_idx = team_frame[["TEAM_ABBR", "GAME_KEY"]].copy()
+    team_idx["TEAM_GAME_IDX"] = team_idx.groupby("TEAM_ABBR", sort=False).cumcount()
+    player_frame = player_frame.merge(team_idx, on=["TEAM_ABBR", "GAME_KEY"], how="left")
+
     pf = _player_form(player_frame)
+    pf["MIN_RANK_TEAM"] = pf.groupby(["TEAM_ABBR", "GAME_KEY"])["MIN_AVG_10"].rank(
+        ascending=False, method="min"
+    )
     pf = pf.merge(
         team_frame.add_prefix("T_"),
         left_on=["TEAM_ABBR", "GAME_KEY"],
@@ -100,6 +109,7 @@ def build_features(
     )
 
     pf["POSITION"] = pf["PLAYER_ID"].map(positions).fillna("F")
+    pf = _add_shrunk_rates(pf, bundle, positions)
     pos_def = _position_defense(bundle)
     pf = pd.merge_asof(
         pf.sort_values("GAME_DATE"),
@@ -132,9 +142,16 @@ def build_features(
             "MIN_AVG_10": pf["MIN_AVG_10"],
             "MIN_SEASON": pf["MIN_SEASON"],
             "MIN_TREND": pf["MIN_AVG_5"] - pf["MIN_SEASON"],
+            "MIN_LAST": pf["MIN_LAST"],
+            "MIN_STD_10": pf["MIN_STD_10"],
+            "MIN_EWM": pf["MIN_EWM"],
+            "MIN_RANK_TEAM": pf["MIN_RANK_TEAM"],
             "PPM_5": pf["PPM_5"], "PPM_10": pf["PPM_10"], "PPM_SEASON": pf["PPM_SEASON"],
+            "PPM_SHRUNK": pf["PPM_SHRUNK"],
             "RPM_5": pf["RPM_5"], "RPM_10": pf["RPM_10"], "RPM_SEASON": pf["RPM_SEASON"],
+            "RPM_SHRUNK": pf["RPM_SHRUNK"],
             "APM_5": pf["APM_5"], "APM_10": pf["APM_10"], "APM_SEASON": pf["APM_SEASON"],
+            "APM_SHRUNK": pf["APM_SHRUNK"],
             "PF_PER_MIN_10": pf["PF_PER_MIN_10"],
             "GAMES_PLAYED": pf["GAMES_PLAYED"],
             "GAMES_SINCE_RETURN": pf["GAMES_SINCE_RETURN"],
@@ -287,11 +304,21 @@ def _player_form(frame: pd.DataFrame) -> pd.DataFrame:
         df[f"RPM_{w}"] = _rate(roll("REB"), roll("MIN"))
         df[f"APM_{w}"] = _rate(roll("AST"), roll("MIN"))
 
-    expanding_sum = lambda c: gp[f"_prev_{c}"].transform(lambda s: s.expanding().sum())
     df["MIN_SEASON"] = gp["_prev_MIN"].transform(lambda s: s.expanding().mean())
-    df["PPM_SEASON"] = _rate(expanding_sum("PTS"), expanding_sum("MIN"))
-    df["RPM_SEASON"] = _rate(expanding_sum("REB"), expanding_sum("MIN"))
-    df["APM_SEASON"] = _rate(expanding_sum("AST"), expanding_sum("MIN"))
+    df["MIN_LAST"] = df["_prev_MIN"]
+    df["MIN_STD_10"] = gp["_prev_MIN"].transform(
+        lambda s: s.rolling(10, min_periods=3).std()
+    )
+    df["MIN_EWM"] = gp["_prev_MIN"].transform(
+        lambda s: s.ewm(halflife=4, min_periods=3).mean()
+    )
+    # Cumulative totals power both the season rates and the shrunk rates
+    # (empirical-Bayes blend toward the league-position prior) added later.
+    for c in ("PTS", "REB", "AST", "MIN"):
+        df[f"CUM_{c}"] = gp[f"_prev_{c}"].transform(lambda s: s.expanding().sum())
+    df["PPM_SEASON"] = _rate(df["CUM_PTS"], df["CUM_MIN"])
+    df["RPM_SEASON"] = _rate(df["CUM_REB"], df["CUM_MIN"])
+    df["APM_SEASON"] = _rate(df["CUM_AST"], df["CUM_MIN"])
     df["PF_PER_MIN_10"] = _rate(
         gp["_prev_PF"].transform(lambda s: s.rolling(10, min_periods=3).sum()),
         gp["_prev_MIN"].transform(lambda s: s.rolling(10, min_periods=3).sum()),
@@ -301,10 +328,13 @@ def _player_form(frame: pd.DataFrame) -> pd.DataFrame:
         df["GAME_DATE"] - gp["GAME_DATE"].shift(1)
     ).dt.days.clip(upper=30)
 
-    # Games since return from a multi-game absence (>= 7 calendar days without
-    # a game is treated as an absence; ramp-up effects fade after ~8 games).
-    gap = df["PLAYER_REST_DAYS"].fillna(99)
-    absence = gap >= 7
+    # Games since return from an absence, measured in *team games missed*
+    # (>= 2 consecutive team games skipped), which is more precise than
+    # calendar gaps around All-Star breaks or light schedule stretches.
+    prev_idx = gp["TEAM_GAME_IDX"].shift(1)
+    same_team = df["TEAM_ABBR"] == gp["TEAM_ABBR"].shift(1)
+    missed = (df["TEAM_GAME_IDX"] - prev_idx - 1).where(same_team, 0.0)
+    absence = missed.fillna(99) >= 2
     seq = df.groupby("PLAYER_ID", sort=False).cumcount()
     last_absence_seq = seq.where(absence).groupby(df["PLAYER_ID"]).ffill()
     df["GAMES_SINCE_RETURN"] = (seq - last_absence_seq).fillna(99).clip(upper=99)
@@ -433,6 +463,54 @@ def _team_context(bundle: Bundle, slate: pd.DataFrame | None) -> pd.DataFrame:
         "TANKING_SPOT", "DEF_RATING", "PACE", "REB_SHARE", "FT_DRAWN_RATE",
     ]
     return tg[keep].copy()
+
+
+# ---------------------------------------------------------------------------
+# Empirical-Bayes shrunk rates
+# ---------------------------------------------------------------------------
+
+SHRINKAGE_MINUTES = 150.0  # prior weight: ~5 full games of evidence
+
+
+def _add_shrunk_rates(
+    pf: pd.DataFrame, bundle: Bundle, positions: dict[int, str]
+) -> pd.DataFrame:
+    """Blend each player's cumulative rates toward the league-position prior.
+
+    Small samples (early season, fringe players) are noisy; the shrunk rate
+    (cum_stat + k * prior) / (cum_min + k) converges to the player's own rate
+    as minutes accumulate. The prior is the league per-minute rate for the
+    player's position computed strictly from games before the row's date.
+    """
+    pg = bundle.player_games.copy()
+    pg["POSITION"] = pg["PLAYER_ID"].map(positions).fillna("F")
+    league = (
+        pg.groupby(["POSITION", "GAME_DATE"])[["PTS", "REB", "AST", "MIN"]]
+        .sum()
+        .sort_index()
+        .groupby(level="POSITION")
+        .cumsum()
+        .groupby(level="POSITION")
+        .shift(1)  # exclude the current date: leakage-free
+        .reset_index()
+    )
+    league["PRIOR_PPM"] = _rate(league["PTS"], league["MIN"])
+    league["PRIOR_RPM"] = _rate(league["REB"], league["MIN"])
+    league["PRIOR_APM"] = _rate(league["AST"], league["MIN"])
+    league = league[["POSITION", "GAME_DATE", "PRIOR_PPM", "PRIOR_RPM", "PRIOR_APM"]]
+
+    pf = pd.merge_asof(
+        pf.sort_values("GAME_DATE"),
+        league.sort_values("GAME_DATE"),
+        on="GAME_DATE",
+        by="POSITION",
+        direction="backward",
+    )
+    k = SHRINKAGE_MINUTES
+    for stat, prior in (("PTS", "PRIOR_PPM"), ("REB", "PRIOR_RPM"), ("AST", "PRIOR_APM")):
+        name = {"PTS": "PPM", "REB": "RPM", "AST": "APM"}[stat] + "_SHRUNK"
+        pf[name] = (pf[f"CUM_{stat}"] + k * pf[prior]) / (pf["CUM_MIN"] + k)
+    return pf
 
 
 # ---------------------------------------------------------------------------

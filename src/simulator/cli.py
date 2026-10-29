@@ -118,17 +118,19 @@ def predict(
         return
 
     table = Table(title=f"Minutes-uplift outliers - {pd.Timestamp(slate_date).date()}")
-    for col in ("#", "Player", "Tm", "Opp", "H/A", "Avg Min", "Proj Min", "Uplift",
-                "P/min", "R/min", "A/min", "Proj PTS"):
+    for col in ("#", "Player", "Tm", "Opp", "H/A", "Avg Min", "Proj Min",
+                "Uplift", "P(+5m)", "P/min", "R/min", "A/min", "PTS P10-P90"):
         table.add_column(col, no_wrap=True)
     for i, (_, r) in enumerate(picks.iterrows(), start=1):
         table.add_row(
             str(i), str(r["PLAYER_NAME"]), r["TEAM_ABBR"], r["OPP_ABBR"],
             "H" if r["IS_HOME"] else "A",
-            f"{r['MIN_SEASON']:.1f}", f"{r['PRED_MIN']:.1f}",
+            f"{r['MIN_SEASON']:.1f}",
+            f"{r['PRED_MIN']:.1f} ({r['PRED_MIN_LO']:.0f}-{r['PRED_MIN_HI']:.0f})",
             f"[bold]{r['UPLIFT']:+.1f}[/bold]",
+            f"{r['PROB_UPLIFT5']:.0%}",
             f"{r['PRED_PPM']:.2f}", f"{r['PRED_RPM']:.2f}", f"{r['PRED_APM']:.2f}",
-            f"{r['EXP_PTS']:.1f}",
+            f"{r['PTS_P50']:.0f} ({r['PTS_P10']:.0f}-{r['PTS_P90']:.0f})",
         )
     console.print(table)
     for i, (_, r) in enumerate(picks.iterrows(), start=1):

@@ -44,6 +44,10 @@ _TARGET_SPECS = [
     ("APM", "apm", True),
 ]
 
+# Quantile models bracket the minutes prediction with a P20-P80 band, which
+# feeds the Monte Carlo simulation and exposes how uncertain each pick is.
+_QUANTILE_SPECS = [("MIN_Q20", 0.2), ("MIN_Q80", 0.8)]
+
 
 @dataclass
 class ModelBundle:
@@ -54,12 +58,20 @@ class ModelBundle:
     importances: dict[str, dict[str, float]] = field(default_factory=dict)
 
     def predict(self, frame: pd.DataFrame) -> pd.DataFrame:
-        """Return PRED_MIN / PRED_PPM / PRED_RPM / PRED_APM for each row."""
+        """Return point predictions plus the P20-P80 minutes band per row."""
         X = frame[self.features]
         out = pd.DataFrame(index=frame.index)
         out["PRED_MIN"] = np.clip(self.models["MIN"].predict(X), 0, 48)
         for t in ("PPM", "RPM", "APM"):
             out[f"PRED_{t}"] = np.clip(self.models[t].predict(X), 0, None)
+        if "MIN_Q20" in self.models:
+            lo = np.clip(self.models["MIN_Q20"].predict(X), 0, 48)
+            hi = np.clip(self.models["MIN_Q80"].predict(X), 0, 48)
+            out["PRED_MIN_LO"] = np.minimum(lo, out["PRED_MIN"])
+            out["PRED_MIN_HI"] = np.maximum(hi, out["PRED_MIN"])
+        else:  # artifacts trained before quantile support
+            out["PRED_MIN_LO"] = out["PRED_MIN"] - 4.0
+            out["PRED_MIN_HI"] = out["PRED_MIN"] + 4.0
         return out
 
     def minutes_contributions(self, frame: pd.DataFrame) -> pd.DataFrame:
@@ -122,6 +134,24 @@ def train_models(
             f: round(float(v) / total, 4)
             for f, v in sorted(zip(fs.features, imp), key=lambda x: -x[1])[:12]
         }
+
+    tr = train.dropna(subset=["MIN"])
+    va = valid.dropna(subset=["MIN"])
+    for name, alpha in _QUANTILE_SPECS:
+        qmodel = LGBMRegressor(**{**_LGBM_PARAMS, "objective": "quantile", "alpha": alpha})
+        qmodel.fit(
+            tr[fs.features],
+            tr["MIN"],
+            eval_X=va[fs.features],
+            eval_y=va["MIN"],
+            callbacks=[early_stopping(50, verbose=False), log_evaluation(0)],
+        )
+        models[name] = qmodel
+    lo = models["MIN_Q20"].predict(va[fs.features])
+    hi = models["MIN_Q80"].predict(va[fs.features])
+    metrics["min_band_coverage"] = float(
+        ((va["MIN"] >= lo) & (va["MIN"] <= hi)).mean()
+    )  # target ~0.6 for a P20-P80 band
 
     return ModelBundle(
         models=models,

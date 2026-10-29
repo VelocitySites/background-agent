@@ -62,21 +62,29 @@ _PHRASES = {
 
 REPORT_COLS = [
     "PLAYER_NAME", "TEAM_ABBR", "OPP_ABBR", "IS_HOME", "GAME_DATE",
-    "MIN_SEASON", "PRED_MIN", "UPLIFT", "PRED_PPM", "PRED_RPM", "PRED_APM",
-    "EXP_PTS", "EXP_REB", "EXP_AST", "SCORE", "WHY",
+    "MIN_SEASON", "PRED_MIN", "PRED_MIN_LO", "PRED_MIN_HI", "UPLIFT",
+    "PROB_UPLIFT5", "PRED_PPM", "PRED_RPM", "PRED_APM",
+    "EXP_PTS", "PTS_P10", "PTS_P50", "PTS_P90", "EXP_REB", "EXP_AST",
+    "SCORE", "WHY",
 ]
 
 
-def predictions_for_rows(models: ModelBundle, rows: pd.DataFrame) -> pd.DataFrame:
-    """Attach predictions, uplift, expected totals, score, and explanations."""
+def predictions_for_rows(
+    models: ModelBundle, rows: pd.DataFrame, n_sims: int = 2000
+) -> pd.DataFrame:
+    """Attach predictions, uplift, simulated distributions, score, explanations."""
+    from simulator.montecarlo import simulate
+
     preds = models.predict(rows)
     out = rows.copy().join(preds)
     out["UPLIFT"] = out["PRED_MIN"] - out["MIN_SEASON"]
     out["EXP_PTS"] = out["PRED_MIN"] * out["PRED_PPM"]
     out["EXP_REB"] = out["PRED_MIN"] * out["PRED_RPM"]
     out["EXP_AST"] = out["PRED_MIN"] * out["PRED_APM"]
-    pra_rate = out["PRED_PPM"] + out["PRED_RPM"] + out["PRED_APM"]
-    out["SCORE"] = out["UPLIFT"].clip(lower=0) * pra_rate
+    out = out.join(simulate(out, n_sims=n_sims))
+    # Expected extra production, probability-weighted by the simulated minutes
+    # distribution - a pick only scores if the spike is actually likely.
+    out["SCORE"] = out["EXTRA_PRA_EV"]
     out["WHY"] = _explanations(models, out)
     return out
 

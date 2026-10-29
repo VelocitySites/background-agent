@@ -64,13 +64,17 @@ simulator override clear
 
 ```
                       Minutes-uplift outliers - 2025-03-26
-┃ # ┃ Player      ┃ Tm  ┃ Opp ┃ H/A ┃ Avg Min ┃ Proj Min ┃ Uplift ┃ P/min ┃ R/min ┃ A/min ┃ Proj PTS ┃
-│ 1 │ ORL Player9 │ ORL │ DAL │ H   │ 14.6    │ 23.9     │ +9.3   │ 0.68  │ 0.31  │ 0.07  │ 16.3     │
-│ 2 │ CHI Player7 │ CHI │ NYK │ H   │ 20.4    │ 29.4     │ +9.0   │ 0.50  │ 0.40  │ 0.06  │ 14.6     │
+┃ # ┃ Player      ┃ Tm  ┃ Opp ┃ H/A ┃ Avg Min ┃ Proj Min     ┃ Uplift ┃ P(+5m) ┃ P/min ┃ PTS P10-P90 ┃
+│ 1 │ ORL Player9 │ ORL │ DAL │ H   │ 14.6    │ 22.4 (15-27) │ +7.8   │ 61%    │ 0.68  │ 15 (5-24)   │
+│ 2 │ BOS Player2 │ BOS │ UTA │ H   │ 34.5    │ 42.9 (35-47) │ +8.4   │ 68%    │ 0.63  │ 27 (20-34)  │
 ...
-  1. ORL Player9: 64 rotation min vacated at his position (+5.5 min); ...
-  2. CHI Player7: 36 rotation min vacated at his position (+4.9 min); ...
+  1. ORL Player9: 64 rotation min vacated at his position (+2.7 min); ...
+  2. BOS Player2: 29 rotation min vacated at his position (+2.5 min); ...
 ```
+
+Each pick shows the P20-P80 projected-minutes band, the simulated probability
+the player actually exceeds his average by 5+ minutes (`P(+5m)`), and the
+P10-P90 range of simulated point outcomes — not just a single number.
 
 ## How it works
 
@@ -90,7 +94,7 @@ nba_api / synthetic  ->  Parquet cache  ->  feature engineering  ->  LightGBM mo
 
 | Group | Signals |
 |---|---|
-| Player form | rolling 5/10-game and season per-minute rates, minutes trend, foul rate, games since return from absence (injury ramp-up curve) |
+| Player form | rolling 5/10-game and season per-minute rates, **shrunk rates** (empirical-Bayes blend toward the league-position prior, so small samples aren't trusted blindly), last-game minutes, minutes volatility, exponentially weighted minutes, minutes rank on team, minutes trend, foul rate, games since return from absence measured in *team games missed* (injury ramp-up curve) |
 | Minutes drivers | **vacated minutes** — season-average minutes of rotation players who missed the team's last game, overall and at the player's position; manual availability overrides |
 | Schedule | rest days, back-to-back, games in last 6 days, road-trip game number, first home game after a trip |
 | Travel | miles since last game, time zones crossed, altitude games (Denver/Utah visitors) |
@@ -101,16 +105,37 @@ nba_api / synthetic  ->  Parquet cache  ->  feature engineering  ->  LightGBM mo
 
 - **MinutesModel** — LightGBM regression for tonight's minutes (chronological
   validation split, never random). This produces the "25 → 35" projection.
+- **Quantile models** — P20/P80 LightGBM regressions bracket the minutes
+  prediction with an uncertainty band (validation coverage is reported).
 - **RatesModel** — LightGBM regressions for PPM/RPM/APM, sample-weighted by
   minutes so garbage-time noise doesn't dominate.
-- Both persist feature importances; `simulator train` prints the top drivers.
+- All persist feature importances; `simulator train` prints the top drivers.
 
-### Screener
+### Monte Carlo simulation
 
-`SCORE = max(uplift, 0) × (PPM + RPM + APM)` — the expected *extra* production
-from the minutes spike. Every pick carries a "why" derived from the minutes
-model's own per-prediction contributions (e.g. "34 rotation min vacated at his
-position (+4.2 min)").
+Every candidate's stat line is simulated thousands of times: minutes drawn
+from the quantile band, counting stats drawn as Poisson around rate×minutes.
+This produces `P(+5m)` (probability the minutes spike materializes), P10-P90
+outcome ranges, and the screener score itself:
+
+`SCORE = E[max(simulated minutes − season avg, 0) × (PPM + RPM + APM)]`
+
+— the *probability-weighted* expected extra production, so a pick only ranks
+highly when the spike is both large and likely. Every pick carries a "why"
+derived from the minutes model's own per-prediction contributions (e.g. "34
+rotation min vacated at his position (+4.2 min)").
+
+### Measured accuracy (same dataset, before → after the feature upgrade)
+
+Walk-forward backtest, 70 slate dates, identical data and windows:
+
+| Metric | Before | After |
+|---|---|---|
+| Minutes MAE (model) | 2.278 | **2.206** |
+| Minutes MAE (naive 10-game avg) | 2.497 | 2.497 |
+| ≥8-min uplift calls hit rate | 72.7% (22 calls) | **92.6%** (27 calls) |
+| Hit-rate 95% CI lower bound | 51.8% | **76.6%** |
+| Top-pick mean realized uplift | +4.99 min | +5.11 min |
 
 ### Verification
 
@@ -135,5 +160,5 @@ position (+4.2 min)").
 ## Development
 
 ```bash
-pytest          # 19 tests: unit (features, ledger) + full pipeline integration
+pytest          # 26 tests: unit (features, ledger, Monte Carlo) + full pipeline integration
 ```

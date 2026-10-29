@@ -51,6 +51,15 @@ def test_model_roundtrip(trained):
     assert loaded.staleness_days() < 1
 
 
+def test_quantile_band_brackets_prediction(trained):
+    bundle, fs, models = trained
+    rows = fs.frame[fs.frame["IS_FUTURE"]]
+    preds = models.predict(rows)
+    assert (preds["PRED_MIN_LO"] <= preds["PRED_MIN"]).all()
+    assert (preds["PRED_MIN"] <= preds["PRED_MIN_HI"]).all()
+    assert 0.3 < models.metrics["min_band_coverage"] < 0.9
+
+
 def test_screen_future_slate(trained):
     bundle, _, models = trained
     date = bundle.upcoming_games["GAME_DATE"].min()
@@ -59,6 +68,8 @@ def test_screen_future_slate(trained):
     assert (top["UPLIFT"] >= 2.0).all()
     assert top["SCORE"].is_monotonic_decreasing
     assert top["WHY"].str.len().gt(0).all()
+    assert top["PROB_UPLIFT5"].between(0, 1).all()
+    assert (top["PTS_P10"] <= top["PTS_P90"]).all()
 
 
 def test_screen_historical_date(trained):

@@ -114,8 +114,9 @@ def _allocate_minutes(
     is_b2b: bool,
     blowout_factor: float,
     tanking: bool,
+    total_minutes: float = 240.0,
 ) -> dict[int, float]:
-    """Distribute 240 minutes among available players with injected effects."""
+    """Distribute the game's minutes among available players with injected effects."""
     available = [p for p in team.players if p.games_out_left == 0]
     weights: dict[int, float] = {}
     vacated = {"G": 0.0, "F": 0.0, "C": 0.0}
@@ -154,7 +155,7 @@ def _allocate_minutes(
         weights[p.pid] = max(m, 0.0)
 
     total = sum(weights.values())
-    return {pid: m / total * 240.0 for pid, m in weights.items()}
+    return {pid: m / total * total_minutes for pid, m in weights.items()}
 
 
 def generate(
@@ -193,6 +194,9 @@ def generate(
                 elif rng.random() < 0.02:
                     p.games_out_left = int(rng.geometric(0.25))
 
+        # Overtime stretches every rotation (~6% of games, 25 extra minutes).
+        game_minutes = 265.0 if rng.random() < 0.06 else 240.0
+
         team_pts = {}
         for team, opp, is_home in ((th, ta, True), (ta, th, False)):
             is_b2b = (
@@ -203,7 +207,14 @@ def generate(
                 (day - last_played[team.abbr]).days if last_played[team.abbr] else 3
             )
             tanking = tanking_month and team.strength < -0.6
-            minutes = _allocate_minutes(rng, team, is_b2b, blowout, tanking)
+            minutes = _allocate_minutes(
+                rng, team, is_b2b, blowout, tanking, total_minutes=game_minutes
+            )
+            # Usage boost: with scorers out, remaining players shoot more often.
+            vacated_total = sum(
+                p.base_min for p in team.players if p.games_out_left > 0
+            )
+            usage_boost = 1.0 + 0.12 * min(vacated_total / 48.0, 1.5)
 
             altitude_away = (
                 not is_home and meta.loc[opp.abbr, "ALTITUDE_FT"] >= 4000
@@ -222,7 +233,7 @@ def generate(
                 if p.games_since_return == -1:
                     p.games_since_return = 0
                 m = minutes[p.pid]
-                pts = int(rng.poisson(max(p.ppm * ctx, 0.01) * m))
+                pts = int(rng.poisson(max(p.ppm * ctx * usage_boost, 0.01) * m))
                 reb = int(rng.poisson(max(p.rpm * (pace / 100.0), 0.01) * m))
                 ast = int(rng.poisson(max(p.apm * (pace / 100.0), 0.01) * m))
                 pf = int(rng.poisson(0.045 * m))

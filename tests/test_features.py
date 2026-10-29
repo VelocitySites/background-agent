@@ -79,6 +79,21 @@ def test_altitude_flag_for_visitors_in_denver():
     assert (den_home["ALTITUDE_GAME"] == 0).all()
 
 
+def test_min_last_and_shrunk_rates_on_uniform_data():
+    # Every game is exactly 30 min / 15 pts, so the previous-game minutes and
+    # the shrunk rate (pulled toward a league prior that is also 0.5) are exact.
+    df = _frame(make_mini_bundle())
+    assert (df["MIN_LAST"] == 30.0).all()
+    assert (df["PPM_SHRUNK"].round(6) == 0.5).all()
+    assert (df["MIN_STD_10"].round(6) == 0.0).all()
+
+
+def test_min_rank_team_orders_by_recent_minutes():
+    df = _frame(make_mini_bundle())
+    # All players log identical minutes, so everyone ties at rank 1.
+    assert (df["MIN_RANK_TEAM"] == 1).all()
+
+
 def test_future_slate_rows_get_features_without_targets():
     bundle = make_mini_bundle()
     df = _frame(bundle, slate=bundle.upcoming_games)

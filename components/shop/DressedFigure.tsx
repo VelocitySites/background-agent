@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useRef, useState } from "react";
+import { useId } from "react";
 import type { ClothingSlot } from "@/types";
 import {
   type ClothingItem,
@@ -15,7 +15,9 @@ import {
 } from "@/lib/shop/avatar";
 import { adjustColor } from "@/lib/shop/color";
 import { cn } from "@/lib/utils";
-import { angleFromYaw, BackBody, SideBody } from "@/components/shop/FigureAngles";
+import { BackBody, SideBody } from "@/components/shop/FigureAngles";
+import { useFigureOrbit } from "@/hooks/useFigureOrbit";
+import { normalizeYaw, orbitFrame } from "@/lib/shop/orbit";
 import { registerShopModels } from "@/lib/shop/garment-manifest";
 import { fold, pictureFor, recipeFor } from "@/lib/shop/graphics";
 import {
@@ -55,11 +57,9 @@ export function DressedFigure({
   className,
 }: DressedFigureProps) {
   const rawId = useId().replace(/:/g, "");
-  const [yaw, setYaw] = useState(0);
-  const [grabbing, setGrabbing] = useState(false);
-  const drag = useRef<{ x: number; moved: boolean } | null>(null);
-  const suppressClick = useRef(false);
-  const facing = angleFromYaw(yaw);
+  const orbitMotion = useFigureOrbit(orbit);
+  const facing = orbitFrame(orbitMotion.yaw);
+  const { grabbing, suppressClick } = orbitMotion;
   const person = avatar ?? DEFAULT_AVATAR;
   const skin = SKIN_TONES[person.skinTone] ?? SKIN_TONES[2];
   const hair = HAIR_COLORS[person.hairColor] ?? HAIR_COLORS[0];
@@ -72,41 +72,11 @@ export function DressedFigure({
   const worn = equipOutfit(outfit, person);
   const showHair = !worn.covered.includes("hair");
   const armsCovered = worn.covered.includes("arms");
-  const top = drawnPiece(worn.bySlot.top, facing.angle);
-  const bottom = drawnPiece(worn.bySlot.bottom, facing.angle);
-  const feet = drawnPiece(worn.bySlot.feet, facing.angle);
-  const head = drawnPiece(worn.bySlot.head, facing.angle);
+  const top = drawnPiece(worn.bySlot.top, facing.layer.angle);
+  const bottom = drawnPiece(worn.bySlot.bottom, facing.layer.angle);
+  const feet = drawnPiece(worn.bySlot.feet, facing.layer.angle);
+  const head = drawnPiece(worn.bySlot.head, facing.layer.angle);
   const clothShadow = top ? recipeFor(top).shadow : -32;
-
-  const turn = (delta: number) => setYaw((current) => current + delta);
-
-  const onPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
-    if (!orbit) return;
-    if ((event.target as HTMLElement).closest("[data-orbit-button]")) return;
-    drag.current = { x: event.clientX, moved: false };
-    setGrabbing(true);
-    event.currentTarget.setPointerCapture(event.pointerId);
-  };
-
-  const onPointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
-    if (!drag.current) return;
-    const dx = event.clientX - drag.current.x;
-    if (Math.abs(dx) > 2) drag.current.moved = true;
-    if (!drag.current.moved) return;
-    drag.current.x = event.clientX;
-    turn(dx * 0.7);
-  };
-
-  const onPointerUp = () => {
-    if (drag.current?.moved) {
-      suppressClick.current = true;
-      window.setTimeout(() => {
-        suppressClick.current = false;
-      }, 280);
-    }
-    drag.current = null;
-    setGrabbing(false);
-  };
 
   const guarded = (slot: ClothingSlot) => {
     if (suppressClick.current) return;
@@ -123,10 +93,11 @@ export function DressedFigure({
         className
       )}
       style={orbit ? { touchAction: "none" } : undefined}
-      onPointerDown={onPointerDown}
-      onPointerMove={onPointerMove}
-      onPointerUp={onPointerUp}
-      onPointerCancel={onPointerUp}
+      ref={orbit ? orbitMotion.setStage : undefined}
+      onPointerDown={orbitMotion.onPointerDown}
+      onPointerMove={orbitMotion.onPointerMove}
+      onPointerUp={orbitMotion.onPointerUp}
+      onPointerCancel={orbitMotion.onPointerUp}
     >
       {framed && (
         <>
@@ -140,6 +111,8 @@ export function DressedFigure({
         className="absolute inset-0 h-full w-full"
         role="img"
         aria-label={`Figure wearing ${describeOutfit(outfit)}. ${BODY_TYPES[person.bodyType] ?? "Average"} build. ${facing.label}.`}
+        data-yaw={normalizeYaw(orbitMotion.yaw).toFixed(0)}
+        data-facing={facing.layer.angle}
         data-rig={worn.rig}
         data-covered={worn.covered.join(" ")}
       >
@@ -153,8 +126,8 @@ export function DressedFigure({
           </clipPath>
         </defs>
 
-        <g transform={`translate(100 0) scale(${facing.squeeze} 1) translate(-100 0)`}>
-        {facing.angle === "back" && (
+        <g transform={`translate(100 0) scale(${facing.layer.squeeze} 1) translate(-100 0)`}>
+        {facing.layer.angle === "back" && (
           <BackBody
             skin={skin}
             skinId={`${rawId}-skin`}
@@ -167,7 +140,7 @@ export function DressedFigure({
             bodyScale={scale}
           />
         )}
-        {facing.angle === "front" && (
+        {facing.layer.angle === "front" && (
           <>
         <ellipse cx="100" cy="408" rx="46" ry="8" fill="rgba(0,0,0,0.28)" />
 
@@ -200,8 +173,8 @@ export function DressedFigure({
         <Headwear item={head} />
           </>
         )}
-        {(facing.angle === "left" || facing.angle === "right") && (
-          <g transform={facing.angle === "left" ? "translate(200 0) scale(-1 1)" : undefined}>
+        {(facing.layer.angle === "left" || facing.layer.angle === "right") && (
+          <g transform={facing.layer.angle === "left" ? "translate(200 0) scale(-1 1)" : undefined}>
             <SideBody
               skin={skin}
               skinId={`${rawId}-skin`}
@@ -215,7 +188,7 @@ export function DressedFigure({
             />
           </g>
         )}
-        <AttachedModels worn={worn} angle={facing.angle} />
+        <AttachedModels worn={worn} angle={facing.layer.angle} />
         </g>
       </svg>
 
@@ -234,6 +207,7 @@ export function DressedFigure({
                   }
                 : undefined
             }
+            grabbing={grabbing}
             className="left-1/2 top-[4%] h-[18%] w-[34%] -translate-x-1/2 rounded-full"
           />
           <Zone
@@ -249,6 +223,7 @@ export function DressedFigure({
                   }
                 : undefined
             }
+            grabbing={grabbing}
             className="left-1/2 top-[24%] h-[26%] w-[46%] -translate-x-1/2 rounded-2xl"
           />
           <Zone
@@ -264,6 +239,7 @@ export function DressedFigure({
                   }
                 : undefined
             }
+            grabbing={grabbing}
             className="left-1/2 top-[50%] h-[28%] w-[40%] -translate-x-1/2 rounded-2xl"
           />
           <Zone
@@ -279,6 +255,7 @@ export function DressedFigure({
                   }
                 : undefined
             }
+            grabbing={grabbing}
             className="left-1/2 top-[80%] h-[14%] w-[52%] -translate-x-1/2 rounded-xl"
           />
         </div>
@@ -290,7 +267,7 @@ export function DressedFigure({
             type="button"
             data-orbit-button
             aria-label="Turn left"
-            onClick={() => turn(-50)}
+            onClick={() => orbitMotion.nudge(-1)}
             className="absolute left-3 top-1/2 z-20 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-white/15 bg-brand-950/80 text-white hover:bg-brand-800"
           >
             <Chevron direction="left" />
@@ -299,18 +276,32 @@ export function DressedFigure({
             type="button"
             data-orbit-button
             aria-label="Turn right"
-            onClick={() => turn(50)}
+            onClick={() => orbitMotion.nudge(1)}
             className="absolute right-3 top-1/2 z-20 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-white/15 bg-brand-950/80 text-white hover:bg-brand-800"
           >
             <Chevron direction="right" />
           </button>
           <div className="pointer-events-none absolute bottom-3 left-1/2 z-20 -translate-x-1/2 text-center">
+            <OrbitDial yaw={orbitMotion.yaw} />
             <p className="text-[10px] uppercase tracking-[0.18em] text-white/80">{facing.label}</p>
-            <p className="text-[10px] text-white/45">Drag to turn</p>
+            <p className="text-[10px] text-white/45">Drag to look around</p>
           </div>
         </>
       )}
     </div>
+  );
+}
+
+function OrbitDial({ yaw }: { yaw: number }) {
+  const wrapped = normalizeYaw(yaw);
+  const rad = (wrapped * Math.PI) / 180;
+  const cx = 18 + Math.sin(rad) * 11;
+  const cy = 11 - Math.cos(rad) * 5;
+  return (
+    <svg viewBox="0 0 36 16" className="mx-auto mb-1 h-3.5 w-8" aria-hidden>
+      <ellipse cx="18" cy="11" rx="12" ry="4.5" fill="none" stroke="rgba(255,255,255,0.28)" strokeWidth="1" />
+      <circle cx={cx} cy={cy} r="1.7" fill="white" />
+    </svg>
   );
 }
 
@@ -370,6 +361,7 @@ function Zone({
   hint,
   onClick,
   onDoubleClick,
+  grabbing,
   className,
 }: {
   label: string;
@@ -377,6 +369,7 @@ function Zone({
   hint?: string;
   onClick: () => void;
   onDoubleClick?: () => void;
+  grabbing?: boolean;
   className: string;
 }) {
   return (
@@ -391,7 +384,7 @@ function Zone({
       }}
       className={cn(
         "group absolute transition-all duration-300",
-        active ? "bg-accent-500/25 ring-2 ring-accent-400" : "hover:bg-white/10",
+        active ? "bg-accent-500/25 ring-2 ring-accent-400" : !grabbing && "hover:bg-white/10",
         hint && "hover:ring-2 hover:ring-accent-300/70",
         className
       )}

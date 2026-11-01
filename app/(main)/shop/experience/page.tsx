@@ -385,6 +385,7 @@ export default function ShopExperiencePage() {
             className="fixed left-1/2 top-32 z-50 -translate-x-1/2 rounded-xl border border-brand-700 bg-brand-800/95 p-4 shadow-2xl backdrop-blur-sm"
           >
             <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
+              <Hint keys="← →" label="Turn the figure" />
               <Hint keys="1–4" label="Open a piece" />
               <Hint keys="R" label="Shuffle" />
               <Hint keys="U" label="Undo" />
@@ -462,7 +463,7 @@ export default function ShopExperiencePage() {
                   {describeLook(items)}
                 </p>
                 <p className="mx-auto mt-1 max-w-md text-center text-xs text-brand-400">
-                  Drag the figure, or the arrows, to turn them around. Clothes are drawn on.
+                  Drag across the figure to look around. The arrow keys do the same. Clothes are drawn on.
                   {avatar?.photoUrl ? " Your photo is the face from the front." : ""}
                 </p>
                 <div className="sm:hidden">

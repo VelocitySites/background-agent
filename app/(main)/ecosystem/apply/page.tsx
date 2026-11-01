@@ -1,0 +1,12 @@
+"use client";
+
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+
+export default function ApplyPage() {
+  const router = useRouter();
+  useEffect(() => {
+    router.replace("/ecosystem/join?path=apply");
+  }, [router]);
+  return null;
+}

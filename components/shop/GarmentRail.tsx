@@ -30,13 +30,10 @@ export function GarmentRail({
   onSelect,
   onRemove,
 }: GarmentRailProps) {
-  const faded = opacity < 0.45;
-
   return (
     <div
       className={cn(
         "absolute z-20 w-52 transition-opacity duration-500",
-        faded && "pointer-events-none",
         className
       )}
       style={{ opacity }}

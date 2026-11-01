@@ -6,8 +6,8 @@ import { attachMesh, attachTurntable, type GarmentModel } from "@/lib/shop/wardr
  * The item id is the shop piece (`t2` is the Reverse Weave Hoodie, and so on).
  * Add an entry and the dressing room equips it. Nothing else has to change.
  *
- * A turntable is four images, one per facing. A missing facing keeps the
- * drawn stand-in for that side. A mesh is a glTF skinned to
+ * A turntable is four images, one per facing. Prefer `registerGraphic` in
+ * `lib/shop/graphics.ts` for a single piece. A mesh is a glTF skinned to
  * `revolution-humanoid-v1`. The figure still draws the stand-in for a mesh
  * until a 3D pass is added; the equip path already returns the mesh.
  *

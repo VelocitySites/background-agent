@@ -15,6 +15,17 @@ export type GarmentKind =
   | "canvas"
   | "runner";
 
+export type AffiliateNetwork = "impact" | "rakuten" | "awin" | "cj" | "shareasale" | "direct";
+
+export interface AffiliateDeal {
+  status: "tracked" | "untracked";
+  network: AffiliateNetwork | null;
+  productUrl: string;
+  trackedUrl: string | null;
+  /** Where Get This Look sends the shopper. Tracked only when status says so. */
+  buyUrl: string;
+}
+
 export interface ClothingItem {
   id: string;
   name: string;
@@ -32,6 +43,8 @@ export interface ClothingItem {
   style: string[];
   kind: GarmentKind;
   sizes?: string[];
+  /** Present once a piece has been through partner intake. Catalog pieces omit it. */
+  affiliate?: AffiliateDeal;
 }
 
 export interface LookPreset {
@@ -343,14 +356,13 @@ export function outfitFromPreset(presetId: string): SelectedOutfit | null {
   return outfitFromIds(preset.items);
 }
 
-export function randomOutfit(): SelectedOutfit {
+export function randomOutfit(source: ClothingItem[] = INVENTORY): SelectedOutfit {
   const outfit = emptyOutfit();
   (["head", "top", "bottom", "feet"] as ClothingSlot[]).forEach((slot) => {
-    const items = itemsForSlot(slot);
+    const items = source.filter((item) => item.slot === slot);
+    if (items.length === 0) return;
     const useItem = slot === "head" ? Math.random() > 0.35 : true;
-    outfit[slot] = useItem
-      ? items[Math.floor(Math.random() * items.length)]
-      : null;
+    outfit[slot] = useItem ? items[Math.floor(Math.random() * items.length)] : null;
   });
   return outfit;
 }

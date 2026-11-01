@@ -4,7 +4,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Sparkles, ChevronLeft, ChevronRight, Zap, Crown, Flame, Leaf, Shirt } from "lucide-react";
 import { LOOK_PRESETS, itemById, type ClothingItem, type LookPreset } from "@/lib/shop/catalog";
-import type { ClothingSlot } from "@/types";
+import { wearPlate } from "@/lib/shop/wardrobe";
 
 const PRESET_ICONS: Record<string, React.ElementType> = {
   "street-king": Crown,
@@ -36,11 +36,13 @@ export function OutfitPresets({
   };
 
   const applyPreset = (preset: LookPreset) => {
-    const outfit: Record<string, ClothingItem | null> = {};
-    (Object.keys(preset.items) as ClothingSlot[]).forEach((slot) => {
-      outfit[slot] = getItemById(preset.items[slot]);
-    });
-    onApplyPreset(outfit);
+    onApplyPreset(
+      wearPlate({
+        id: preset.id,
+        name: preset.name,
+        slots: preset.items,
+      })
+    );
   };
 
   const calculatePresetTotal = (preset: LookPreset): number => {

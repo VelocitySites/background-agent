@@ -16,6 +16,16 @@ import {
 import { adjustColor } from "@/lib/shop/color";
 import { cn } from "@/lib/utils";
 import { angleFromYaw, BackBody, SideBody } from "@/components/shop/FigureAngles";
+import { registerShopModels } from "@/lib/shop/garment-manifest";
+import {
+  equipOutfit,
+  imageFor,
+  standInItem,
+  type FigureAngle,
+  type WornRig,
+} from "@/lib/shop/wardrobe";
+
+registerShopModels();
 
 const BODY_SCALE = [0.84, 0.93, 1, 1.08, 1.16];
 
@@ -54,11 +64,17 @@ export function DressedFigure({
   const hair = HAIR_COLORS[person.hairColor] ?? HAIR_COLORS[0];
   const skinShadow = adjustColor(skin, -28);
   const scale = BODY_SCALE[person.bodyType] ?? 1;
-  const top = outfit.top ?? null;
-  const bottom = outfit.bottom ?? null;
-  const feet = outfit.feet ?? null;
-  const head = outfit.head ?? null;
-  const longSleeves = top?.kind === "hoodie" || top?.kind === "oxford";
+  const topPiece = outfit.top ?? null;
+  const bottomPiece = outfit.bottom ?? null;
+  const feetPiece = outfit.feet ?? null;
+  const headPiece = outfit.head ?? null;
+  const worn = equipOutfit(outfit, person);
+  const showHair = !worn.covered.includes("hair");
+  const armsCovered = worn.covered.includes("arms");
+  const top = standInItem(worn.bySlot.top, facing.angle);
+  const bottom = standInItem(worn.bySlot.bottom, facing.angle);
+  const feet = standInItem(worn.bySlot.feet, facing.angle);
+  const head = standInItem(worn.bySlot.head, facing.angle);
 
   const turn = (delta: number) => setYaw((current) => current + delta);
 
@@ -121,7 +137,9 @@ export function DressedFigure({
         viewBox="0 0 200 430"
         className="absolute inset-0 h-full w-full"
         role="img"
-        aria-label={`Figure wearing ${describeOutfit(outfit)}. ${BODY_TYPES[person.bodyType] ?? "Average"} build.`}
+        aria-label={`Figure wearing ${describeOutfit(outfit)}. ${BODY_TYPES[person.bodyType] ?? "Average"} build. ${facing.label}.`}
+        data-rig={worn.rig}
+        data-covered={worn.covered.join(" ")}
       >
         <defs>
           <linearGradient id={`${rawId}-skin`} x1="0" y1="0" x2="0" y2="1">
@@ -139,7 +157,7 @@ export function DressedFigure({
             skin={skin}
             skinId={`${rawId}-skin`}
             hair={hair}
-            hairStyle={person.hairStyle}
+            hairStyle={showHair ? person.hairStyle : 5}
             top={top}
             bottom={bottom}
             feet={feet}
@@ -154,12 +172,12 @@ export function DressedFigure({
         <g transform={`translate(100 230) scale(${scale} 1) translate(-100 -230)`}>
           <Legs item={bottom} skinId={`${rawId}-skin`} />
           <Shoes item={feet} />
-          {!longSleeves && <Arms skinId={`${rawId}-skin`} />}
+          {!armsCovered && <Arms skinId={`${rawId}-skin`} />}
           <Torso item={top} skin={skin} skinId={`${rawId}-skin`} />
-          <Hands skin={skin} covered={longSleeves} />
+          <Hands skin={skin} covered={armsCovered} />
         </g>
 
-        <HairBack style={person.hairStyle} color={hair} />
+        {showHair && <HairBack style={person.hairStyle} color={hair} />}
         {top?.kind === "hoodie" && <Hood color={top.color} dark={adjustColor(top.color, -30)} />}
         <ellipse cx="100" cy="58" rx="30" ry="36" fill={`url(#${rawId}-skin)`} />
         <rect x="88" y="88" width="24" height="22" rx="6" fill={skin} />
@@ -176,7 +194,7 @@ export function DressedFigure({
         ) : (
           <Face skin={skin} />
         )}
-        <HairFront style={person.hairStyle} color={hair} overPhoto={Boolean(person.photoUrl)} />
+        {showHair && <HairFront style={person.hairStyle} color={hair} overPhoto={Boolean(person.photoUrl)} />}
         <Headwear item={head} />
           </>
         )}
@@ -186,7 +204,7 @@ export function DressedFigure({
               skin={skin}
               skinId={`${rawId}-skin`}
               hair={hair}
-              hairStyle={person.hairStyle}
+              hairStyle={showHair ? person.hairStyle : 5}
               top={top}
               bottom={bottom}
               feet={feet}
@@ -195,6 +213,7 @@ export function DressedFigure({
             />
           </g>
         )}
+        <AttachedModels worn={worn} angle={facing.angle} />
         </g>
       </svg>
 
@@ -203,7 +222,7 @@ export function DressedFigure({
           <Zone
             label="Select headwear"
             active={activeSlot === "head"}
-            hint={deepDive && head ? "Double-click" : undefined}
+            hint={deepDive && headPiece ? "Double-click" : undefined}
             onClick={() => guarded("head")}
             onDoubleClick={
               onPieceDoubleClick
@@ -218,7 +237,7 @@ export function DressedFigure({
           <Zone
             label="Select top"
             active={activeSlot === "top"}
-            hint={deepDive && top ? "Double-click" : undefined}
+            hint={deepDive && topPiece ? "Double-click" : undefined}
             onClick={() => guarded("top")}
             onDoubleClick={
               onPieceDoubleClick
@@ -233,7 +252,7 @@ export function DressedFigure({
           <Zone
             label="Select bottom"
             active={activeSlot === "bottom"}
-            hint={deepDive && bottom ? "Double-click" : undefined}
+            hint={deepDive && bottomPiece ? "Double-click" : undefined}
             onClick={() => guarded("bottom")}
             onDoubleClick={
               onPieceDoubleClick
@@ -248,7 +267,7 @@ export function DressedFigure({
           <Zone
             label="Select footwear"
             active={activeSlot === "feet"}
-            hint={deepDive && feet ? "Double-click" : undefined}
+            hint={deepDive && feetPiece ? "Double-click" : undefined}
             onClick={() => guarded("feet")}
             onDoubleClick={
               onPieceDoubleClick
@@ -290,6 +309,36 @@ export function DressedFigure({
         </>
       )}
     </div>
+  );
+}
+
+const SLOT_FRAMES: Record<"head" | "top" | "bottom" | "feet", { x: number; y: number; w: number; h: number }> = {
+  head: { x: 58, y: 2, w: 84, h: 96 },
+  top: { x: 28, y: 100, w: 144, h: 140 },
+  bottom: { x: 58, y: 214, w: 84, h: 156 },
+  feet: { x: 36, y: 348, w: 128, h: 58 },
+};
+
+function AttachedModels({ worn, angle }: { worn: WornRig; angle: FigureAngle }) {
+  return (
+    <g>
+      {(["head", "top", "bottom", "feet"] as const).map((slot) => {
+        const href = imageFor(worn.bySlot[slot], angle);
+        if (!href) return null;
+        const frame = SLOT_FRAMES[slot];
+        return (
+          <image
+            key={slot}
+            href={href}
+            x={frame.x}
+            y={frame.y}
+            width={frame.w}
+            height={frame.h}
+            preserveAspectRatio="xMidYMax meet"
+          />
+        );
+      })}
+    </g>
   );
 }
 

@@ -1,0 +1,533 @@
+{
+  "scrapedAt": "2026-11-04T05:00:33.752Z",
+  "note": "Public catalog fields only. No product photos. Purchases are not tracked.",
+  "feeds": [
+    "https://www.allbirds.com/products.json?limit=50",
+    "https://www.everlane.com/products.json?limit=40",
+    "https://kotn.com/products.json?limit=40",
+    "https://www.outdoorvoices.com/products.json?limit=40",
+    "https://www.taylorstitch.com/products.json?limit=40",
+    "https://pangaia.com/products.json?limit=40",
+    "https://www.reigningchamp.com/products.json?limit=40",
+    "https://kith.com/products.json?limit=30",
+    "https://www.noahny.com/products.json?limit=30"
+  ],
+  "failures": [],
+  "samples": [
+    {
+      "outlet": "Allbirds",
+      "origin": "https://www.allbirds.com",
+      "product": {
+        "title": "Men's Tree Runner NZ - Buoy Yellow (Natural White Sole)",
+        "vendor": "Allbirds",
+        "product_type": "",
+        "handle": "mens-tree-runner-nz-buoy-yellow-natural-white-sole",
+        "options": [
+          {
+            "name": "Size",
+            "values": [
+              "8",
+              "8.5",
+              "9",
+              "9.5"
+            ]
+          }
+        ],
+        "variants": [
+          {
+            "price": "120.00",
+            "title": "8",
+            "option1": "8"
+          }
+        ]
+      }
+    },
+    {
+      "outlet": "Allbirds",
+      "origin": "https://www.allbirds.com",
+      "product": {
+        "title": "Men's Canvas Runner NZ - Deep Navy Stripes (Blizzard Sole)",
+        "vendor": "Allbirds",
+        "product_type": "Shoes",
+        "handle": "mens-canvas-runner-nz",
+        "options": [
+          {
+            "name": "Size",
+            "values": [
+              "8",
+              "8.5",
+              "9",
+              "9.5"
+            ]
+          }
+        ],
+        "variants": [
+          {
+            "price": "100.00",
+            "title": "8",
+            "option1": "8"
+          }
+        ]
+      }
+    },
+    {
+      "outlet": "Everlane",
+      "origin": "https://www.everlane.com",
+      "product": {
+        "title": "The Way-High® Curve Jean | Dark Indigo",
+        "vendor": "Everlane",
+        "product_type": "Denim",
+        "handle": "f-btm-dnm-whgh-crv-drk-long",
+        "options": [
+          {
+            "name": "Size",
+            "values": [
+              "23L",
+              "24L",
+              "25L",
+              "26L"
+            ]
+          }
+        ],
+        "variants": [
+          {
+            "price": "88.00",
+            "title": "23L",
+            "option1": "23L"
+          }
+        ]
+      }
+    },
+    {
+      "outlet": "Everlane",
+      "origin": "https://www.everlane.com",
+      "product": {
+        "title": "Cropped Luxe Fleece Hoodie | Cashmere Blue",
+        "vendor": "Everlane",
+        "product_type": "Knit Tops",
+        "handle": "f-swts-frc-crhd-ls-blu",
+        "options": [
+          {
+            "name": "Size",
+            "values": [
+              "XXS",
+              "XS",
+              "S",
+              "M"
+            ]
+          }
+        ],
+        "variants": [
+          {
+            "price": "85.00",
+            "title": "XXS",
+            "option1": "XXS"
+          }
+        ]
+      }
+    },
+    {
+      "outlet": "Kotn",
+      "origin": "https://kotn.com",
+      "product": {
+        "title": "Women's Shrunken Tee in Lavender Ash/Raisin",
+        "vendor": "Kotn",
+        "product_type": "",
+        "handle": "womens-shrunken-tee-in-lavender-ash-raisin",
+        "options": [
+          {
+            "name": "Color",
+            "values": [
+              "Black",
+              "Birch/Deep Ocean/Haze",
+              "Lavender Ash/Raisin",
+              "Pacific Blue"
+            ]
+          },
+          {
+            "name": "Colour",
+            "values": [
+              "Birch/Deep Ocean/Haze",
+              "Olive",
+              "Black",
+              "Lavender Ash/Raisin"
+            ]
+          },
+          {
+            "name": "Size",
+            "values": [
+              "XS",
+              "L",
+              "M",
+              "S"
+            ]
+          }
+        ],
+        "variants": [
+          {
+            "price": "48.00",
+            "title": "Lavender Ash/Raisin / Lavender Ash/Raisin / XS",
+            "option1": "Lavender Ash/Raisin"
+          }
+        ]
+      }
+    },
+    {
+      "outlet": "Taylor Stitch",
+      "origin": "https://www.taylorstitch.com",
+      "product": {
+        "title": "The Haven Sweater Hoodie in Heather Grey Wool",
+        "vendor": "Taylor Stitch",
+        "product_type": "Sweaters",
+        "handle": "haven-sweater-hoodie-in-heather-grey-wool-2611",
+        "options": [
+          {
+            "name": "Size",
+            "values": [
+              "XS - 36",
+              "S - 38",
+              "M - 40",
+              "L - 42"
+            ]
+          }
+        ],
+        "variants": [
+          {
+            "price": "208.00",
+            "title": "XS - 36",
+            "option1": "XS - 36"
+          }
+        ]
+      }
+    },
+    {
+      "outlet": "Pangaia",
+      "origin": "https://pangaia.com",
+      "product": {
+        "title": "Womens Merino Wool Straight Leg Trousers—Smoked Black",
+        "vendor": "PANGAIA",
+        "product_type": "Trousers",
+        "handle": "womens-merino-wool-straight-leg-trousers-smoked-black",
+        "options": [
+          {
+            "name": "Color",
+            "values": [
+              "Smoked Black"
+            ]
+          },
+          {
+            "name": "Size",
+            "values": [
+              "XXS",
+              "XS",
+              "S",
+              "M"
+            ]
+          }
+        ],
+        "variants": [
+          {
+            "price": "240.00",
+            "title": "Smoked Black / XXS",
+            "option1": "Smoked Black"
+          }
+        ]
+      }
+    },
+    {
+      "outlet": "Reigning Champ",
+      "origin": "https://www.reigningchamp.com",
+      "product": {
+        "title": "Cashmere Watch Cap Beanie",
+        "vendor": "Reigning Champ",
+        "product_type": "ACCESSORIES",
+        "handle": "cashmere-watch-cap-beanie-navy",
+        "options": [
+          {
+            "name": "Size",
+            "values": [
+              "O/S"
+            ]
+          },
+          {
+            "name": "Colour",
+            "values": [
+              "Navy"
+            ]
+          }
+        ],
+        "variants": [
+          {
+            "price": "78.00",
+            "title": "O/S / Navy",
+            "option1": "O/S"
+          }
+        ]
+      }
+    },
+    {
+      "outlet": "Reigning Champ",
+      "origin": "https://www.reigningchamp.com",
+      "product": {
+        "title": "Brushed Fleece Standard Sweatpant",
+        "vendor": "Reigning Champ",
+        "product_type": "MENS",
+        "handle": "brushed-fleece-standard-sweatpant-black",
+        "options": [
+          {
+            "name": "Size",
+            "values": [
+              "Extra Small",
+              "Small",
+              "Medium",
+              "Large"
+            ]
+          },
+          {
+            "name": "Colour",
+            "values": [
+              "Black"
+            ]
+          },
+          {
+            "name": "Fit",
+            "values": [
+              "Standard"
+            ]
+          }
+        ],
+        "variants": [
+          {
+            "price": "118.00",
+            "title": "Extra Small / Black / Standard",
+            "option1": "Extra Small"
+          }
+        ]
+      }
+    },
+    {
+      "outlet": "Kith",
+      "origin": "https://kith.com",
+      "product": {
+        "title": "Rains The Dry Boot Mid - Green",
+        "vendor": "Rains",
+        "product_type": "Boots",
+        "handle": "ran70240-03",
+        "options": [
+          {
+            "name": "Size",
+            "values": [
+              "34",
+              "35",
+              "35.5",
+              "36"
+            ]
+          }
+        ],
+        "variants": [
+          {
+            "price": "160.00",
+            "title": "34",
+            "option1": "34"
+          }
+        ]
+      }
+    },
+    {
+      "outlet": "Noah",
+      "origin": "https://www.noahny.com",
+      "product": {
+        "title": "Classic Sweatpant",
+        "vendor": "Noah",
+        "product_type": "Sweatshirts",
+        "handle": "classic-sweatpants-5",
+        "options": [
+          {
+            "name": "Color",
+            "values": [
+              "Heather Grey",
+              "Navy"
+            ]
+          },
+          {
+            "name": "Size",
+            "values": [
+              "XS",
+              "S",
+              "M",
+              "L"
+            ]
+          }
+        ],
+        "variants": [
+          {
+            "price": "158.00",
+            "title": "Heather Grey / XS",
+            "option1": "Heather Grey"
+          }
+        ]
+      }
+    },
+    {
+      "outlet": "Noah",
+      "origin": "https://www.noahny.com",
+      "product": {
+        "title": "Noah x Timex Corduroy 5-Panel",
+        "vendor": "0",
+        "product_type": "Hats",
+        "handle": "noah-x-timex-corduroy-5-panel",
+        "options": [
+          {
+            "name": "Color",
+            "values": [
+              "Navy"
+            ]
+          }
+        ],
+        "variants": [
+          {
+            "price": "88.00",
+            "title": "Navy",
+            "option1": "Navy"
+          }
+        ]
+      }
+    },
+    {
+      "outlet": "Allbirds",
+      "origin": "https://www.allbirds.com",
+      "product": {
+        "title": "Women's Wool Cruiser - Soft Eucalyptus (Burnt Olive Sole)",
+        "vendor": "Allbirds",
+        "product_type": "",
+        "handle": "womens-wool-cruiser-soft-eucalyptus-burnt-olive-sole",
+        "options": [
+          {
+            "name": "Size",
+            "values": [
+              "5",
+              "5.5",
+              "6",
+              "6.5"
+            ]
+          }
+        ],
+        "variants": [
+          {
+            "price": "120.00",
+            "title": "5",
+            "option1": "5"
+          }
+        ]
+      }
+    },
+    {
+      "outlet": "Everlane",
+      "origin": "https://www.everlane.com",
+      "product": {
+        "title": "The Day Glove | Red",
+        "vendor": "Everlane",
+        "product_type": "Flats + Other",
+        "handle": "f-ftwr-lthr-glv-nbal-rstsd",
+        "options": [
+          {
+            "name": "Size",
+            "values": [
+              "5",
+              "5.5",
+              "6",
+              "6.5"
+            ]
+          }
+        ],
+        "variants": [
+          {
+            "price": "98.00",
+            "title": "5",
+            "option1": "5"
+          }
+        ]
+      }
+    },
+    {
+      "outlet": "Kotn",
+      "origin": "https://kotn.com",
+      "product": {
+        "title": "Women's Shrunken Tee in Birch/Deep Ocean/Haze",
+        "vendor": "Kotn",
+        "product_type": "",
+        "handle": "womens-shrunken-tee-in-birch-deep-ocean-haze",
+        "options": [
+          {
+            "name": "Color",
+            "values": [
+              "Black",
+              "Birch/Deep Ocean/Haze",
+              "Lavender Ash/Raisin",
+              "Pacific Blue"
+            ]
+          },
+          {
+            "name": "Colour",
+            "values": [
+              "Birch/Deep Ocean/Haze",
+              "Olive",
+              "Black",
+              "Lavender Ash/Raisin"
+            ]
+          },
+          {
+            "name": "Size",
+            "values": [
+              "XS",
+              "L",
+              "M",
+              "S"
+            ]
+          }
+        ],
+        "variants": [
+          {
+            "price": "48.00",
+            "title": "Birch/Deep Ocean/Haze / Birch/Deep Ocean/Haze / XS",
+            "option1": "Birch/Deep Ocean/Haze"
+          }
+        ]
+      }
+    },
+    {
+      "outlet": "Outdoor Voices",
+      "origin": "https://www.outdoorvoices.com",
+      "product": {
+        "title": "Sunday Short",
+        "vendor": "Outdoor Voices",
+        "product_type": "Shorts",
+        "handle": "m-sunday-short-earth",
+        "options": [
+          {
+            "name": "Color",
+            "values": [
+              "Earth"
+            ]
+          },
+          {
+            "name": "Size",
+            "values": [
+              "XS",
+              "S",
+              "M",
+              "L"
+            ]
+          }
+        ],
+        "variants": [
+          {
+            "price": "58.00",
+            "title": "Earth / XS",
+            "option1": "Earth"
+          }
+        ]
+      }
+    }
+  ]
+}

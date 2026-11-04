@@ -319,6 +319,12 @@ export default function ShopExperiencePage() {
 
           <div className="flex items-center gap-2 sm:gap-4">
             <Link
+              href="/shop/sample"
+              className="text-sm text-brand-400 transition-colors hover:text-white"
+            >
+              Sample clothes
+            </Link>
+            <Link
               href="/shop/partners"
               className="text-sm text-brand-400 transition-colors hover:text-white"
             >

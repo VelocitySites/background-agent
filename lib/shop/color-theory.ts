@@ -79,6 +79,22 @@ export function parseColor(input: string): string | null {
   return hit ? hit[1] : null;
 }
 
+/** A known color named inside a merchant phrase, such as "Dark Indigo" or "Heather Grey". */
+export function matchColorPhrase(input: string): { name: string; hex: string } | null {
+  const direct = parseColor(input);
+  const normalized = input.trim().toLowerCase().replace(/[-_/]+/g, " ").replace(/\s+/g, " ").trim();
+  if (direct) {
+    const named = NAMED_COLORS.find(([name]) => name === normalized);
+    return { name: named?.[0] ?? direct, hex: direct };
+  }
+  const names = [...NAMED_COLORS].sort((a, b) => b[0].length - a[0].length);
+  for (const [name, hex] of names) {
+    const body = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/ /g, "\\s+");
+    if (new RegExp(`(?:^|[^a-z])${body}(?:[^a-z]|$)`).test(normalized)) return { name, hex };
+  }
+  return null;
+}
+
 export function rgbToHsl(r: number, g: number, b: number) {
   const rn = r / 255;
   const gn = g / 255;
